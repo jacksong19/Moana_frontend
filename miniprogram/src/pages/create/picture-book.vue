@@ -412,6 +412,8 @@ setInterval(() => {
   background: $bg-base;
   display: flex;
   flex-direction: column;
+  width: 750rpx;
+  overflow: hidden;
 }
 
 // 导航栏
@@ -419,9 +421,9 @@ setInterval(() => {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
   z-index: $z-sticky;
   background: $bg-base;
+  width: 750rpx;
 }
 
 .nav-content {
@@ -466,7 +468,9 @@ setInterval(() => {
 // 主滚动区
 .main-scroll {
   flex: 1;
+  width: 750rpx;
   padding: 0 $spacing-md;
+  box-sizing: border-box;
 }
 
 // 步骤指示器
@@ -596,6 +600,8 @@ setInterval(() => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: $spacing-sm;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .theme-card {
@@ -797,13 +803,14 @@ setInterval(() => {
   position: fixed;
   bottom: 0;
   left: 0;
-  right: 0;
   display: flex;
   gap: $spacing-sm;
   padding: $spacing-md;
   padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
   background: $bg-card;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+  width: 750rpx;
+  box-sizing: border-box;
 }
 
 .btn-secondary {
