@@ -143,6 +143,8 @@ const isPlaying = ref(false)
 const playHistoryId = ref('')  // 后端返回的 play_history_id
 const showInteraction = ref(false)
 const playStartTime = ref(0)   // 播放开始时间戳
+const lastUpdateTime = ref(0)  // 上次更新进度的时间戳
+const UPDATE_INTERVAL = 5000   // 进度更新间隔 5秒
 
 // 时间提醒
 const showTimeWarning = ref(false)
@@ -361,18 +363,37 @@ function stopAutoPlay() {
   }
 }
 
-async function updatePlayProgress() {
+async function updatePlayProgress(force = false) {
   if (!playHistoryId.value) return
 
+  // 防抖：5秒内不重复更新（除非强制更新）
+  const now = Date.now()
+  if (!force && now - lastUpdateTime.value < UPDATE_INTERVAL) return
+  lastUpdateTime.value = now
+
   try {
-    const timeSpent = Math.round((Date.now() - playStartTime.value) / 1000)
+    const timeSpent = Math.round((now - playStartTime.value) / 1000)
     await updateProgress(
       playHistoryId.value,
       currentPage.value + 1,  // 当前页码 (1-based)
       timeSpent               // 已播放秒数
     )
+
+    // 本地缓存进度（用于离线恢复）
+    uni.setStorageSync(`play_progress_${contentId.value}`, {
+      page: currentPage.value,
+      time: timeSpent,
+      updatedAt: now
+    })
   } catch (e) {
-    console.log('更新进度失败')
+    console.log('更新进度失败，已本地缓存')
+    // 即使后端更新失败，也保存本地缓存
+    const timeSpent = Math.round((now - playStartTime.value) / 1000)
+    uni.setStorageSync(`play_progress_${contentId.value}`, {
+      page: currentPage.value,
+      time: timeSpent,
+      updatedAt: now
+    })
   }
 }
 
@@ -559,6 +580,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // 强制保存最后进度
+  updatePlayProgress(true)
+
   stopAutoPlay()
   if (checkTimer) clearInterval(checkTimer)
   audioContext?.destroy()
