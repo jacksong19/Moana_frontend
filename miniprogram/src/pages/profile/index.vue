@@ -88,7 +88,7 @@
           <view class="menu-item" @tap="goToFavorites">
             <view class="menu-icon">❤️</view>
             <text class="menu-label">我的收藏</text>
-            <view class="menu-badge">即将上线</view>
+            <text class="menu-arrow">›</text>
           </view>
 
           <view class="menu-item" @tap="goToFeedback">
@@ -161,15 +161,15 @@ function goToSettings() {
 }
 
 function goToHistory() {
-  uni.showToast({ title: '学习报告开发中', icon: 'none' })
+  uni.navigateTo({ url: '/pages/report/index' })
 }
 
 function goToFavorites() {
-  uni.showToast({ title: '收藏功能即将上线', icon: 'none' })
+  uni.navigateTo({ url: '/pages/favorites/index' })
 }
 
 function goToFeedback() {
-  uni.showToast({ title: '感谢您的反馈！', icon: 'none' })
+  uni.navigateTo({ url: '/pages/feedback/index' })
 }
 
 function showAbout() {

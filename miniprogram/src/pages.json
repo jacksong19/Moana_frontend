@@ -65,6 +65,41 @@
         "navigationBarBackgroundColor": "#FFF9F0",
         "navigationBarTextStyle": "black"
       }
+    },
+    {
+      "path": "pages/favorites/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "我的收藏"
+      }
+    },
+    {
+      "path": "pages/create/nursery-rhyme",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "创作儿歌"
+      }
+    },
+    {
+      "path": "pages/create/video",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "创作视频"
+      }
+    },
+    {
+      "path": "pages/report/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "学习报告"
+      }
+    },
+    {
+      "path": "pages/feedback/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "意见反馈"
+      }
     }
   ],
   "globalStyle": {
