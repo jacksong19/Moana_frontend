@@ -53,6 +53,9 @@
         <text class="book-title">{{ content?.title }}</text>
       </view>
       <view class="top-right">
+        <button class="share-btn" open-type="share">
+          <text>📤</text>
+        </button>
         <view class="child-mode-btn" @tap="goToChildMode">
           <text>👶</text>
         </view>
@@ -124,7 +127,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { useChildStore } from '@/stores/child'
 import { useContentStore } from '@/stores/content'
 import { startPlay, updateProgress, completePlay, submitInteraction } from '@/api/play'
@@ -579,6 +582,23 @@ onMounted(() => {
   loadContent()
 })
 
+// 分享配置
+onShareAppMessage(() => {
+  return {
+    title: content.value?.title || '来看这个有趣的绘本',
+    path: `/pages/play/picture-book?id=${contentId.value}`,
+    imageUrl: content.value?.cover_url || ''
+  }
+})
+
+onShareTimeline(() => {
+  return {
+    title: content.value?.title || '来看这个有趣的绘本',
+    query: `id=${contentId.value}`,
+    imageUrl: content.value?.cover_url || ''
+  }
+})
+
 onUnmounted(() => {
   // 强制保存最后进度
   updatePlayProgress(true)
@@ -691,9 +711,14 @@ onUnmounted(() => {
   z-index: 10;
 }
 
-.top-left,
-.top-right {
+.top-left {
   width: 80rpx;
+}
+
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
 }
 
 .close-btn,
@@ -710,6 +735,29 @@ onUnmounted(() => {
   text {
     font-size: 36rpx;
     color: $text-white;
+  }
+}
+
+.share-btn {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+  border: none;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+
+  &::after {
+    display: none;  // 移除微信按钮默认边框
+  }
+
+  text {
+    font-size: 32rpx;
   }
 }
 
