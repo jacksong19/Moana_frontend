@@ -12,8 +12,7 @@ page {
   color: $text-primary;
   line-height: $line-height-base;
   box-sizing: border-box;
-  width: 100%;
-  overflow: hidden;
+  // 不要在 page 上设置 overflow: hidden，否则会阻止整个页面滚动！
 }
 
 view, text, image {
@@ -29,8 +28,11 @@ view, text, image {
   min-height: 100vh;
   background: $gradient-warm;
   padding-bottom: calc(#{$spacing-lg} + #{$safe-bottom});
-  width: 100%;
-  overflow: hidden;
+  // 使用 750rpx 固定宽度，避免微信小程序中 100%/100vw 导致的右侧截断问题
+  width: 750rpx;
+  box-sizing: border-box;
+  // 只禁止水平溢出，允许垂直滚动
+  overflow-x: hidden;
 }
 
 .safe-top {

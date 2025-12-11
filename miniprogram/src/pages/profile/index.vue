@@ -209,7 +209,8 @@ onShow(() => {
   min-height: 100vh;
   background: $gradient-warm;
   width: 750rpx;
-  overflow: hidden;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .main-scroll {

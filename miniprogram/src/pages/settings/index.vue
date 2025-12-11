@@ -253,6 +253,9 @@ onMounted(() => {
 .page-container {
   min-height: 100vh;
   background: $bg-base;
+  width: 750rpx;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 // 导航栏
@@ -260,9 +263,10 @@ onMounted(() => {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
   z-index: $z-sticky;
   background: $bg-base;
+  width: 750rpx;
+  box-sizing: border-box;
 }
 
 .nav-content {
@@ -306,6 +310,8 @@ onMounted(() => {
 
 .main-scroll {
   padding: $spacing-md;
+  width: 750rpx;
+  box-sizing: border-box;
 }
 
 // 区块

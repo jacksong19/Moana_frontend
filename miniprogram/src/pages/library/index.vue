@@ -181,6 +181,8 @@ onShow(() => {
   background: $gradient-warm;
   display: flex;
   flex-direction: column;
+  width: 750rpx;
+  overflow-x: hidden;
 }
 
 .filter-bar {
@@ -188,6 +190,8 @@ onShow(() => {
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
   background: $bg-base;
+  width: 750rpx;
+  box-sizing: border-box;
 }
 
 .filter-item {
@@ -213,6 +217,8 @@ onShow(() => {
 .content-scroll {
   flex: 1;
   padding: $spacing-md;
+  width: 750rpx;
+  box-sizing: border-box;
 }
 
 .content-grid {

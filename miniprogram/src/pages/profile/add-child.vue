@@ -208,11 +208,16 @@ async function handleSubmit() {
   background: $bg-base;
   display: flex;
   flex-direction: column;
+  width: 750rpx;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .main-scroll {
   flex: 1;
   padding: $spacing-md;
+  width: 750rpx;
+  box-sizing: border-box;
 }
 
 .form-card {
@@ -404,11 +409,12 @@ async function handleSubmit() {
   position: fixed;
   bottom: 0;
   left: 0;
-  right: 0;
+  width: 750rpx;
   padding: $spacing-md;
   padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
   background: $bg-card;
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
 }
 
 .submit-btn {
