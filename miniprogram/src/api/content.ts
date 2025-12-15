@@ -78,12 +78,24 @@ export interface GenerateNurseryRhymeParams {
   music_style?: MusicStyle
 }
 
+// 歌词段落接口
+export interface LyricsSection {
+  content: string
+}
+
+// 歌词接口（可能是字符串或对象）
+export interface LyricsObject {
+  full_text: string
+  sections: LyricsSection[]
+}
+
 // 儿歌接口
 export interface NurseryRhyme {
   id: string
   title: string
   theme_topic: string
-  lyrics: string
+  // lyrics 可能是字符串或对象，取决于后端版本
+  lyrics: string | LyricsObject
   audio_url: string
   cover_url?: string
   duration: number
@@ -143,6 +155,35 @@ export async function generateNurseryRhyme(params: GenerateNurseryRhymeParams): 
     console.error(`[generateNurseryRhyme] 请求失败，耗时: ${(Date.now() - startTime) / 1000}秒，错误:`, e)
     throw e
   }
+}
+
+// Suno 任务状态阶段（后端回调实际值）
+// text: 歌词生成完成, first: 第一首歌曲完成, complete: 全部完成
+export type SunoTaskStage = 'waiting' | 'text' | 'first' | 'complete' | 'error'
+
+// Suno 任务状态响应
+export interface SunoTaskStatus {
+  task_id: string
+  progress: number  // 0-100
+  stage: SunoTaskStage
+  message?: string
+  tracks?: Array<{
+    id: string
+    title: string
+    audio_url: string
+    cover_url?: string
+    duration: number
+    lyrics?: string  // Suno 生成的歌词
+  }>
+  lyrics?: string  // 也可能在顶层返回歌词
+  error?: string
+}
+
+/**
+ * 轮询 Suno 任务状态
+ */
+export async function getSunoTaskStatus(taskId: string): Promise<SunoTaskStatus> {
+  return request.get<SunoTaskStatus>(`/callback/suno/status/${taskId}`)
 }
 
 /**

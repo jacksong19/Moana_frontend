@@ -25,9 +25,20 @@
       <!-- 封面 -->
       <view class="cover-section">
         <view class="cover-wrapper" :class="{ playing: isPlaying }">
-          <image v-if="song?.cover_url" :src="song.cover_url" mode="aspectFill" class="cover-image" />
+          <image
+            v-if="song?.cover_url"
+            :src="song.cover_url"
+            mode="aspectFill"
+            class="cover-image"
+            @load="onCoverLoad"
+            @error="onCoverError"
+          />
           <view v-else class="cover-placeholder">
             <text>🎵</text>
+          </view>
+          <!-- 封面加载中指示器 -->
+          <view v-if="song?.cover_url && !coverLoaded" class="cover-loading">
+            <view class="loading-spinner-small"></view>
           </view>
         </view>
         <!-- 歌曲标题显示在封面下方 -->
@@ -59,8 +70,9 @@
         <view class="control-btn" @tap="handleReplay">
           <text>🔄</text>
         </view>
-        <view class="play-btn" @tap="togglePlay">
-          <text>{{ isPlaying ? '⏸' : '▶' }}</text>
+        <view class="play-btn" :class="{ buffering: audioBuffering }" @tap="togglePlay">
+          <view v-if="audioBuffering" class="buffering-spinner"></view>
+          <text v-else>{{ isPlaying ? '⏸' : '▶' }}</text>
         </view>
         <button class="control-btn share-btn" open-type="share">
           <text>📤</text>
@@ -97,6 +109,11 @@ const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
 const statusBarHeight = ref(20)
+
+// 加载状态
+const coverLoaded = ref(false)
+const audioBuffering = ref(false)
+const audioReady = ref(false)
 
 // 音频实例
 let audioContext: UniApp.InnerAudioContext | null = null
@@ -244,6 +261,36 @@ function handleClose() {
   uni.navigateBack()
 }
 
+// 预加载封面图
+function preloadCover() {
+  if (!song.value?.cover_url) return
+
+  console.log('[nursery-rhyme] 预加载封面图:', song.value.cover_url)
+  uni.getImageInfo({
+    src: song.value.cover_url,
+    success: () => {
+      console.log('[nursery-rhyme] 封面图预加载成功')
+      coverLoaded.value = true
+    },
+    fail: (err) => {
+      console.error('[nursery-rhyme] 封面图预加载失败:', err)
+      // 即使失败也标记为完成，避免一直显示加载
+      coverLoaded.value = true
+    }
+  })
+}
+
+// 封面加载完成回调
+function onCoverLoad() {
+  console.log('[nursery-rhyme] 封面图加载完成')
+  coverLoaded.value = true
+}
+
+function onCoverError() {
+  console.error('[nursery-rhyme] 封面图加载失败')
+  coverLoaded.value = true
+}
+
 function initAudio() {
   if (!song.value?.audio_url) {
     console.warn('[nursery-rhyme] 没有音频 URL')
@@ -284,6 +331,8 @@ function initAudio() {
   // 先设置事件监听器，再设置 src
   audioContext.onCanplay(() => {
     console.log('[nursery-rhyme] 音频可以播放, duration:', audioContext?.duration)
+    audioReady.value = true
+    audioBuffering.value = false
     // 获取真实时长
     if (audioContext?.duration && audioContext.duration > 0) {
       duration.value = audioContext.duration
@@ -327,6 +376,15 @@ function initAudio() {
 
   audioContext.onWaiting(() => {
     console.log('[nursery-rhyme] 音频缓冲中...')
+    audioBuffering.value = true
+  })
+
+  audioContext.onSeeking(() => {
+    audioBuffering.value = true
+  })
+
+  audioContext.onSeeked(() => {
+    audioBuffering.value = false
   })
 
   // 设置音频源
@@ -354,9 +412,11 @@ async function loadContent() {
     console.log('[nursery-rhyme] 临时存储数据 keys:', tempSong ? Object.keys(tempSong) : 'null')
     if (tempSong) {
       song.value = tempSong
-      console.log('[nursery-rhyme] 设置 song.value, lyrics:', song.value?.lyrics?.substring(0, 50))
+      console.log('[nursery-rhyme] 设置 song.value')
       uni.removeStorageSync('temp_nursery_rhyme')
       duration.value = tempSong.duration || 0
+      // 并行预加载封面和初始化音频
+      preloadCover()
       initAudio()
       loading.value = false
       return
@@ -368,6 +428,8 @@ async function loadContent() {
       // 转换为 NurseryRhyme 类型
       song.value = result as unknown as NurseryRhyme
       duration.value = song.value.duration || 0
+      // 并行预加载封面和初始化音频
+      preloadCover()
       initAudio()
     }
   } catch (e) {
@@ -614,6 +676,29 @@ onUnmounted(() => {
   }
 }
 
+// 封面加载指示器
+.cover-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 3;
+}
+
+.loading-spinner-small {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 .cover-title {
   margin-top: $spacing-md;
   font-size: $font-lg;
@@ -767,6 +852,20 @@ onUnmounted(() => {
       0 4rpx 16rpx rgba($song-primary, 0.4),
       0 0 0 4rpx rgba($song-primary, 0.1);
   }
+
+  &.buffering {
+    opacity: 0.8;
+  }
+}
+
+// 缓冲中旋转动画
+.buffering-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 // === 风格标签 ===

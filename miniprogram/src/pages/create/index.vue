@@ -71,7 +71,7 @@
             <view class="card-info">
               <view class="card-title-row">
                 <text class="card-title">AI 视频</text>
-                <view class="card-badge badge-soon">即将上线</view>
+                <view class="card-badge badge-new">New</view>
               </view>
               <text class="card-desc">绘本动态化，让静态故事动起来</text>
             </view>

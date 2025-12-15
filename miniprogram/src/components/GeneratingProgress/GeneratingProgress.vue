@@ -55,11 +55,18 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
+// Suno 任务阶段类型（后端回调: text, first, complete）
+type SunoTaskStage = 'waiting' | 'text' | 'first' | 'complete' | 'error'
+
 const props = withDefaults(defineProps<{
   progress: number
   type?: 'book' | 'song' | 'video'  // 内容类型
+  stage?: SunoTaskStage | string   // 后端返回的真实阶段
+  message?: string                  // 后端返回的真实消息
 }>(), {
-  type: 'book'
+  type: 'book',
+  stage: '',
+  message: ''
 })
 
 // 绘本生成阶段
@@ -131,14 +138,42 @@ const currentEmojiIndex = ref(0)
 let tipInterval: number
 let emojiInterval: number
 
+// 根据后端阶段映射到 UI 阶段索引（后端回调: text, first, complete）
+const stageMapping: Record<string, number> = {
+  waiting: 0,
+  text: 1,      // 歌词生成完成
+  first: 2,     // 第一首歌曲完成
+  complete: 3,  // 全部完成
+  error: 0
+}
+
 const currentStage = computed(() => {
+  // 如果有后端返回的真实阶段，使用它
+  if (props.stage && props.type === 'song') {
+    return stageMapping[props.stage] ?? 0
+  }
+  // 否则根据进度估算
   if (props.progress < 30) return 0
   if (props.progress < 70) return 1
   if (props.progress < 95) return 2
   return 3
 })
 
+// 阶段标题映射（后端回调: text, first, complete）
+const songStageTexts: Record<string, string> = {
+  waiting: 'AI 启动中',
+  text: '歌词创作完成',
+  first: '第一首就绪',
+  complete: '生成完成',
+  error: '生成失败'
+}
+
 const statusText = computed(() => {
+  // 如果有后端返回的真实阶段，使用映射
+  if (props.stage && props.type === 'song') {
+    return songStageTexts[props.stage] || '生成中'
+  }
+
   if (props.type === 'song') {
     if (props.progress < 30) return '歌词创作中'
     if (props.progress < 70) return '音乐生成中'
@@ -159,6 +194,11 @@ const statusText = computed(() => {
 })
 
 const statusDesc = computed(() => {
+  // 如果有后端返回的消息，直接使用
+  if (props.message) {
+    return props.message
+  }
+
   if (props.type === 'song') {
     if (props.progress < 30) return 'AI 正在为宝贝编写专属歌词'
     if (props.progress < 70) return '正在谱写欢乐的旋律'
@@ -202,7 +242,10 @@ onUnmounted(() => {
 
 .generating-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
@@ -224,7 +267,10 @@ onUnmounted(() => {
 
 .modal-decor {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   pointer-events: none;
 }
 
@@ -267,7 +313,10 @@ onUnmounted(() => {
 
 .icon-ring {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   border-radius: 50%;
   border: 4rpx solid transparent;
 
@@ -277,7 +326,10 @@ onUnmounted(() => {
   }
 
   &.ring-2 {
-    inset: 16rpx;
+    top: 16rpx;
+    left: 16rpx;
+    right: 16rpx;
+    bottom: 16rpx;
     border-right-color: $secondary;
     animation: spin 2s linear infinite reverse;
   }
@@ -285,7 +337,10 @@ onUnmounted(() => {
 
 .icon-center {
   position: absolute;
-  inset: 32rpx;
+  top: 32rpx;
+  left: 32rpx;
+  right: 32rpx;
+  bottom: 32rpx;
   background: $gradient-warm;
   border-radius: 50%;
   display: flex;

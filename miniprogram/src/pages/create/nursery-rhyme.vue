@@ -140,6 +140,8 @@
     <GeneratingProgress
       v-if="isGenerating"
       :progress="generatingProgress"
+      :stage="generatingStage"
+      :message="generatingMessage"
       type="song"
     />
   </view>
@@ -151,8 +153,8 @@ import { onLoad } from '@dcloudio/uni-app'
 import { useChildStore } from '@/stores/child'
 import { useContentStore } from '@/stores/content'
 import GeneratingProgress from '@/components/GeneratingProgress/GeneratingProgress.vue'
-import { generateNurseryRhyme } from '@/api/content'
-import type { ThemeItem, MusicStyle, NurseryRhyme } from '@/api/content'
+import { generateNurseryRhyme, getSunoTaskStatus } from '@/api/content'
+import type { ThemeItem, MusicStyle, NurseryRhyme, SunoTaskStage } from '@/api/content'
 
 const childStore = useChildStore()
 const contentStore = useContentStore()
@@ -191,9 +193,20 @@ const selectedStyle = ref<MusicStyle>('cheerful')
 // 生成状态
 const isGenerating = ref(false)
 const generatingProgress = ref(0)
+const generatingStage = ref<SunoTaskStage>('waiting')
+const generatingMessage = ref('')
 
 // 存储生成结果
 const generatedSong = ref<NurseryRhyme | null>(null)
+
+// 阶段对应的进度和消息（后端回调阶段: text, first, complete）
+const stageInfo: Record<SunoTaskStage, { minProgress: number; message: string }> = {
+  waiting: { minProgress: 5, message: '准备中...' },
+  text: { minProgress: 30, message: '歌词创作完成，正在编曲...' },
+  first: { minProgress: 70, message: '第一首歌曲就绪，继续生成...' },
+  complete: { minProgress: 100, message: '生成完成！' },
+  error: { minProgress: 0, message: '生成失败' }
+}
 
 // 计算属性
 const childName = computed(() => childStore.currentChild?.name || '宝贝')
@@ -274,22 +287,80 @@ async function handleNext() {
   }
 }
 
+// 轮询任务状态
+async function pollTaskStatus(taskId: string): Promise<NurseryRhyme | null> {
+  const maxAttempts = 60  // 最多轮询 60 次（3分钟）
+  const pollInterval = 3000  // 3秒轮询一次
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const status = await getSunoTaskStatus(taskId)
+      console.log('[pollTaskStatus] 状态:', JSON.stringify(status))
+      console.log('[pollTaskStatus] stage:', status.stage, 'progress:', status.progress)
+
+      // 更新阶段和进度
+      if (status.stage) {
+        generatingStage.value = status.stage
+      }
+      generatingMessage.value = status.message || stageInfo[status.stage]?.message || ''
+
+      // 使用真实进度，但确保不低于阶段最小进度
+      const minProgress = stageInfo[status.stage]?.minProgress || 0
+      const actualProgress = status.progress || 0
+      generatingProgress.value = Math.max(actualProgress, minProgress)
+      console.log('[pollTaskStatus] 更新进度:', generatingProgress.value, '阶段:', generatingStage.value)
+
+      if (status.stage === 'complete' && status.tracks && status.tracks.length > 0) {
+        // 生成完成，返回第一首歌曲
+        const track = status.tracks[0]
+        // 歌词可能在 track 中或 status 顶层
+        const lyricsContent = track.lyrics || status.lyrics || ''
+        console.log('[pollTaskStatus] 提取歌词:', lyricsContent?.substring(0, 100))
+        return {
+          id: track.id,
+          title: track.title,
+          audio_url: track.audio_url,
+          cover_url: track.cover_url,
+          duration: track.duration,
+          theme_topic: selectedTheme.value?.name || '',
+          music_style: selectedStyle.value,
+          lyrics: lyricsContent,
+          personalization: { child_name: childStore.currentChild?.name || '' },
+          created_at: new Date().toISOString()
+        } as NurseryRhyme
+      }
+
+      if (status.stage === 'error') {
+        throw new Error(status.error || '生成失败')
+      }
+
+      // 等待后继续轮询
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
+    } catch (e: any) {
+      console.error('[pollTaskStatus] 轮询错误:', e)
+      // 网络错误时继续尝试
+      if (attempt < maxAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval))
+      }
+    }
+  }
+
+  throw new Error('生成超时，请重试')
+}
+
 async function startGenerate() {
   if (!selectedTheme.value || !childStore.currentChild) return
 
   isGenerating.value = true
   generatingProgress.value = 0
-
-  // 模拟进度增长
-  const progressTimer = setInterval(() => {
-    if (generatingProgress.value < 90) {
-      generatingProgress.value += Math.random() * 15
-    }
-  }, 2000)
+  generatingStage.value = 'waiting'
+  generatingMessage.value = '正在启动 AI 创作...'
 
   try {
     const ageMonths = childStore.currentChildAgeMonths || 36
 
+    // 发起生成请求
+    console.log('[startGenerate] 发起生成请求')
     const result = await generateNurseryRhyme({
       child_name: childStore.currentChild.name,
       age_months: ageMonths,
@@ -298,29 +369,43 @@ async function startGenerate() {
       music_style: selectedStyle.value
     })
 
-    console.log('生成儿歌成功:', result)
-    console.log('生成儿歌 - 返回的 keys:', Object.keys(result))
-    console.log('生成儿歌 - lyrics 字段:', result.lyrics?.substring(0, 100))
-    console.log('生成儿歌 - audio_url:', result.audio_url)
-    generatedSong.value = result
+    console.log('[startGenerate] 生成请求返回:', result)
+
+    // 检查是否返回了 task_id（异步模式）
+    const taskId = (result as any).task_id
+    if (taskId) {
+      console.log('[startGenerate] 异步模式，task_id:', taskId)
+      generatingMessage.value = 'AI 正在创作歌词...'
+
+      // 轮询任务状态
+      const finalResult = await pollTaskStatus(taskId)
+      if (finalResult) {
+        generatedSong.value = finalResult
+      }
+    } else {
+      // 同步模式，直接返回结果
+      console.log('[startGenerate] 同步模式，直接返回结果')
+      generatedSong.value = result
+    }
+
     generatingProgress.value = 100
+    generatingMessage.value = '生成完成！'
 
-    clearInterval(progressTimer)
-
-    // 跳转到播放页 - 始终存储数据到临时存储，确保播放页能立即获取内容
+    // 跳转到播放页
     setTimeout(() => {
       isGenerating.value = false
-      // 临时存储到全局，播放页读取
-      console.log('[create] 存储到临时存储:', JSON.stringify(result).substring(0, 200))
-      uni.setStorageSync('temp_nursery_rhyme', result)
-      uni.redirectTo({
-        url: `/pages/play/nursery-rhyme?id=${result.id || ''}&fromGenerate=1`
-      })
+      if (generatedSong.value) {
+        console.log('[startGenerate] 存储到临时存储')
+        uni.setStorageSync('temp_nursery_rhyme', generatedSong.value)
+        uni.redirectTo({
+          url: `/pages/play/nursery-rhyme?id=${generatedSong.value.id || ''}&fromGenerate=1`
+        })
+      }
     }, 500)
   } catch (e: any) {
-    clearInterval(progressTimer)
     isGenerating.value = false
-    console.error('生成儿歌失败:', e)
+    generatingStage.value = 'error'
+    console.error('[startGenerate] 生成儿歌失败:', e)
     uni.showToast({ title: e.message || '生成失败，请重试', icon: 'none' })
   }
 }

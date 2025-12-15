@@ -11,12 +11,21 @@
       <swiper-item v-for="(page, index) in content.pages" :key="index">
         <view class="page-content">
           <!-- 页面图片 -->
-          <image
-            v-if="page.image_url"
-            class="page-image"
-            :src="page.image_url"
-            mode="aspectFill"
-          />
+          <view v-if="page.image_url" class="page-image-wrapper">
+            <image
+              class="page-image"
+              :src="page.image_url"
+              mode="aspectFit"
+              :lazy-load="false"
+              @load="onImageLoad(index)"
+              @error="onImageError(index)"
+            />
+            <!-- 图片加载中占位 -->
+            <view v-if="!imageLoaded[index]" class="image-loading">
+              <view class="loading-spinner"></view>
+            </view>
+          </view>
+          <!-- 无图片占位 -->
           <view v-else class="page-placeholder">
             <text>📖</text>
           </view>
@@ -149,6 +158,9 @@ const playStartTime = ref(0)   // 播放开始时间戳
 const lastUpdateTime = ref(0)  // 上次更新进度的时间戳
 const UPDATE_INTERVAL = 5000   // 进度更新间隔 5秒
 
+// 图片加载状态
+const imageLoaded = ref<boolean[]>([])
+
 // 时间提醒
 const showTimeWarning = ref(false)
 const warningType = ref<'rest' | 'session' | 'daily'>('rest')
@@ -197,6 +209,46 @@ function stopCurrentAudio() {
       console.log('[stopCurrentAudio] 暂停失败，忽略')
     }
   }
+}
+
+// 图片加载完成
+function onImageLoad(index: number) {
+  console.log('[onImageLoad] 图片加载完成, 页:', index)
+  imageLoaded.value[index] = true
+}
+
+// 图片加载失败
+function onImageError(index: number) {
+  console.error('[onImageError] 图片加载失败, 页:', index)
+  // 即使失败也标记为已加载，避免一直显示loading
+  imageLoaded.value[index] = true
+}
+
+// 预加载所有图片
+function preloadAllImages() {
+  if (!content.value?.pages?.length) return
+
+  console.log('[preloadAllImages] 开始预加载', content.value.pages.length, '张图片')
+
+  // 初始化加载状态数组
+  imageLoaded.value = new Array(content.value.pages.length).fill(false)
+
+  // 使用 uni.getImageInfo 预加载图片
+  content.value.pages.forEach((page, index) => {
+    if (page.image_url) {
+      uni.getImageInfo({
+        src: page.image_url,
+        success: () => {
+          console.log('[preloadAllImages] 预加载成功, 页:', index)
+          imageLoaded.value[index] = true
+        },
+        fail: (err) => {
+          console.error('[preloadAllImages] 预加载失败, 页:', index, err)
+          // 预加载失败不影响后续显示
+        }
+      })
+    }
+  })
 }
 
 function prevPage() {
@@ -523,6 +575,9 @@ async function loadContent() {
     content.value = contentStore.currentContent
     console.log('[loadContent] 内容加载成功:', content.value?.title, 'pages:', content.value?.pages?.length)
 
+    // 预加载所有图片
+    preloadAllImages()
+
     // 开始播放会话
     if (childStore.currentChild && content.value) {
       console.log('[loadContent] 开始播放会话, childId:', childStore.currentChild.id)
@@ -575,6 +630,8 @@ onLoad((options) => {
   if (options?.fromGenerate === '1') {
     content.value = contentStore.currentContent
     loading.value = false
+    // 预加载所有图片
+    preloadAllImages()
     // 音频实例会在 playCurrentPageAudio 中按需创建
     // 不在这里预先创建，避免状态问题
     timeLimitManager.startSession()
@@ -618,7 +675,10 @@ onUnmounted(() => {
 
 .play-container {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: #1a1a2e;
 }
 
@@ -631,11 +691,52 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-image-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #2d2d44 0%, #1a1a2e 100%);
+  overflow: hidden;
 }
 
 .page-image {
   width: 100%;
   height: 100%;
+  /* aspectFit 模式会完整显示图片，不裁剪 */
+}
+
+/* 图片加载中状态 */
+.image-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #2d2d44 0%, #1a1a2e 100%);
+}
+
+.loading-spinner {
+  width: 80rpx;
+  height: 80rpx;
+  border: 6rpx solid rgba(255, 255, 255, 0.2);
+  border-top-color: $primary;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .page-placeholder {
@@ -873,7 +974,10 @@ onUnmounted(() => {
 // 加载状态
 .loading-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
@@ -900,7 +1004,10 @@ onUnmounted(() => {
 // 时间提醒弹窗
 .time-warning-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;

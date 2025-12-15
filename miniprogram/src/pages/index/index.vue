@@ -259,6 +259,17 @@ const mixedRecommendations = ref([
     theme: 'brushing_teeth'
   },
   {
+    id: 'video_animate',
+    type: 'video',
+    typeIcon: '🎬',
+    typeLabel: '视频',
+    icon: '✨',
+    iconBg: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
+    title: '绘本动起来',
+    desc: '将绘本转为精彩动画',
+    actionText: '制作'
+  },
+  {
     id: 'song_abc',
     type: 'song',
     typeIcon: '🎵',
@@ -293,6 +304,17 @@ const mixedRecommendations = ref([
     desc: '温柔旋律助眠',
     actionText: '创作',
     theme: 'lullaby'
+  },
+  {
+    id: 'video_story',
+    type: 'video',
+    typeIcon: '🎬',
+    typeLabel: '视频',
+    icon: '🎥',
+    iconBg: 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+    title: '故事动画',
+    desc: '让故事栩栩如生',
+    actionText: '制作'
   }
 ])
 
@@ -338,8 +360,8 @@ function handleRecommend(item: any) {
     uni.navigateTo({ url: `/pages/create/picture-book?theme=${item.theme}` })
   } else if (item.type === 'song') {
     uni.navigateTo({ url: `/pages/create/nursery-rhyme?theme=${item.theme}` })
-  } else {
-    uni.showToast({ title: '视频功能即将上线', icon: 'none' })
+  } else if (item.type === 'video') {
+    uni.navigateTo({ url: '/pages/create/video' })
   }
 }
 
