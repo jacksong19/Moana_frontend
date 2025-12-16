@@ -277,6 +277,48 @@ const progressPercent = computed(() => {
   return (currentTime.value / duration.value) * 100
 })
 
+// 将英文歌曲结构标记替换为中文
+const structureMap: Record<string, string> = {
+  'verse': '【主歌】',
+  'chorus': '【副歌】',
+  'bridge': '【桥段】',
+  'intro': '【前奏】',
+  'outro': '【尾奏】',
+  'pre-chorus': '【预副歌】',
+  'pre chorus': '【预副歌】',
+  'hook': '【记忆点】',
+  'refrain': '【副歌】',
+  'interlude': '【间奏】'
+}
+
+// 替换歌词中的英文结构标记为中文
+function replaceStructureTags(line: string): string {
+  let result = line
+
+  // 匹配格式1: [Verse] / [Chorus 1] / [VERSE]
+  result = result.replace(/\[([A-Za-z][A-Za-z\s-]*)(?:\s*\d*)?\]/gi, (match, tag) => {
+    const key = tag.toLowerCase().trim().replace(/\s+/g, '-')
+    return structureMap[key] || structureMap[key.replace(/-/g, ' ')] || structureMap[key.replace(/-/g, '')] || ''
+  })
+
+  // 匹配格式2: **Verse** / **Chorus 1**
+  result = result.replace(/\*\*([A-Za-z][A-Za-z\s-]*)(?:\s*\d*)?\*\*/gi, (match, tag) => {
+    const key = tag.toLowerCase().trim().replace(/\s+/g, '-')
+    return structureMap[key] || structureMap[key.replace(/-/g, ' ')] || ''
+  })
+
+  // 匹配格式3: 单独一行的结构标记（如 "Verse:" / "Chorus 1:" / "VERSE"）
+  const structureKeys = Object.keys(structureMap).join('|').replace(/-/g, '[- ]?')
+  const lineOnlyPattern = new RegExp(`^\\s*(${structureKeys})(?:\\s*\\d*)?\\s*:?\\s*$`, 'i')
+  const lineMatch = result.match(lineOnlyPattern)
+  if (lineMatch) {
+    const key = lineMatch[1].toLowerCase().trim().replace(/\s+/g, '-')
+    result = structureMap[key] || structureMap[key.replace(/-/g, ' ')] || ''
+  }
+
+  return result.trim()
+}
+
 // 解析歌词，支持后端时间戳格式、LRC 格式和纯文本
 function parseLyrics(lyrics: any, totalDuration: number): { lines: string[], data: LyricLine[] } {
   if (!lyrics) return { lines: [], data: [] }
@@ -303,8 +345,11 @@ function parseLyrics(lyrics: any, totalDuration: number): { lines: string[], dat
       )
 
       if (isNewLine && currentLine.trim()) {
-        lines.push(currentLine.trim())
-        data.push({ time: lineStartTime, text: currentLine.trim() })
+        const processed = replaceStructureTags(currentLine)
+        if (processed) {
+          lines.push(processed)
+          data.push({ time: lineStartTime, text: processed })
+        }
         currentLine = ''
         lineStartTime = -1
       }
@@ -318,8 +363,11 @@ function parseLyrics(lyrics: any, totalDuration: number): { lines: string[], dat
 
       // 句末标点后换行
       if (/[。！？，、]$/.test(currentLine) && currentLine.length > 8) {
-        lines.push(currentLine.trim())
-        data.push({ time: lineStartTime, text: currentLine.trim() })
+        const processed = replaceStructureTags(currentLine)
+        if (processed) {
+          lines.push(processed)
+          data.push({ time: lineStartTime, text: processed })
+        }
         currentLine = ''
         lineStartTime = -1
       }
@@ -327,8 +375,11 @@ function parseLyrics(lyrics: any, totalDuration: number): { lines: string[], dat
 
     // 处理最后一行
     if (currentLine.trim()) {
-      lines.push(currentLine.trim())
-      data.push({ time: lineStartTime >= 0 ? lineStartTime : 0, text: currentLine.trim() })
+      const processed = replaceStructureTags(currentLine)
+      if (processed) {
+        lines.push(processed)
+        data.push({ time: lineStartTime >= 0 ? lineStartTime : 0, text: processed })
+      }
     }
 
     if (lines.length > 0) {
@@ -371,7 +422,9 @@ function parseLyrics(lyrics: any, totalDuration: number): { lines: string[], dat
         const seconds = parseInt(match[2], 10)
         const ms = match[3] ? parseInt(match[3].padEnd(3, '0'), 10) : 0
         const time = minutes * 60 + seconds + ms / 1000
-        const content = line.replace(lrcPattern, '').trim()
+        const rawContent = line.replace(lrcPattern, '').trim()
+        // 替换结构标记
+        const content = replaceStructureTags(rawContent)
         if (content && time >= 0) {
           parsed.push({ time, text: content })
         }
@@ -381,51 +434,9 @@ function parseLyrics(lyrics: any, totalDuration: number): { lines: string[], dat
     return { lines: parsed.map(p => p.text), data: parsed }
   }
 
-  // 4. 纯文本模式：基于字数权重分配时间
-  // 将英文歌曲结构标记替换为中文
-  const structureMap: Record<string, string> = {
-    'verse': '【主歌】',
-    'chorus': '【副歌】',
-    'bridge': '【桥段】',
-    'intro': '【前奏】',
-    'outro': '【尾奏】',
-    'pre-chorus': '【预副歌】',
-    'pre chorus': '【预副歌】',
-    'hook': '【记忆点】',
-    'refrain': '【副歌】',
-    'interlude': '【间奏】'
-  }
-
-  // 构建匹配所有结构关键词的正则（不区分大小写）
-  const structureKeys = Object.keys(structureMap).join('|').replace(/-/g, '[- ]?')
-
+  // 4. 纯文本模式：基于字数权重分配时间，并替换结构标记
   const cleanLines = rawLines
-    .map(line => {
-      let result = line
-
-      // 匹配格式1: [Verse] / [Chorus 1] / [VERSE]
-      result = result.replace(/\[([A-Za-z][A-Za-z\s-]*)(?:\s*\d*)?\]/gi, (match, tag) => {
-        const key = tag.toLowerCase().trim().replace(/\s+/g, ' ').replace(/ /g, '-')
-        // 尝试多种格式匹配
-        return structureMap[key] || structureMap[key.replace(/-/g, ' ')] || structureMap[key.replace(/-/g, '')] || ''
-      })
-
-      // 匹配格式2: **Verse** / **Chorus 1**
-      result = result.replace(/\*\*([A-Za-z][A-Za-z\s-]*)(?:\s*\d*)?\*\*/gi, (match, tag) => {
-        const key = tag.toLowerCase().trim().replace(/\s+/g, '-')
-        return structureMap[key] || structureMap[key.replace(/-/g, ' ')] || ''
-      })
-
-      // 匹配格式3: 单独一行的结构标记（如 "Verse:" / "Chorus 1:" / "VERSE"）
-      const lineOnlyPattern = new RegExp(`^\\s*(${structureKeys})(?:\\s*\\d*)?\\s*:?\\s*$`, 'i')
-      const lineMatch = result.match(lineOnlyPattern)
-      if (lineMatch) {
-        const key = lineMatch[1].toLowerCase().trim().replace(/\s+/g, '-')
-        result = structureMap[key] || structureMap[key.replace(/-/g, ' ')] || ''
-      }
-
-      return result.trim()
-    })
+    .map(line => replaceStructureTags(line))
     .filter(line => line.length > 0)
 
   if (cleanLines.length === 0 || totalDuration === 0) {
