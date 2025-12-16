@@ -382,8 +382,25 @@ function parseLyrics(lyrics: any, totalDuration: number): { lines: string[], dat
   }
 
   // 4. 纯文本模式：基于字数权重分配时间
+  // 将英文歌曲结构标记替换为中文
+  const structureMap: Record<string, string> = {
+    'verse': '【主歌】',
+    'chorus': '【副歌】',
+    'bridge': '【桥段】',
+    'intro': '【前奏】',
+    'outro': '【尾奏】',
+    'pre-chorus': '【预副歌】',
+    'hook': '【记忆点】'
+  }
+
   const cleanLines = rawLines
-    .map(line => line.replace(/\[(?:Verse|Chorus|Bridge|Intro|Outro)(?:\s*\d*)?\]/gi, '').trim())
+    .map(line => {
+      // 替换结构标记为中文
+      return line.replace(/\[([A-Za-z-]+)(?:\s*\d*)?\]/gi, (match, tag) => {
+        const key = tag.toLowerCase()
+        return structureMap[key] || ''  // 未知标记直接移除
+      }).trim()
+    })
     .filter(line => line.length > 0)
 
   if (cleanLines.length === 0 || totalDuration === 0) {
