@@ -137,8 +137,8 @@ export async function getThemes(): Promise<ThemeList> {
 }
 
 /**
- * 生成绘本
- * AI 生成需要较长时间，设置 3 分钟超时
+ * 生成绘本（同步版，已废弃）
+ * @deprecated 使用 generatePictureBookAsync 代替，避免 Cloudflare 524 超时
  */
 export async function generatePictureBook(params: GeneratePictureBookParams): Promise<PictureBook> {
   console.log('[generatePictureBook] 开始请求，超时设置: 180000ms (3分钟)')
@@ -156,6 +156,44 @@ export async function generatePictureBook(params: GeneratePictureBookParams): Pr
     console.error(`[generatePictureBook] 请求失败，耗时: ${(Date.now() - startTime) / 1000}秒，错误:`, e)
     throw e
   }
+}
+
+// 异步生成绘本响应
+export interface AsyncPictureBookResponse {
+  task_id: string
+  message: string
+}
+
+// 绘本任务状态响应
+export interface PictureBookTaskStatus {
+  task_id: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  progress: number  // 0-100
+  stage: string     // 生成阶段描述
+  message?: string
+  content_id?: string  // 完成后返回
+  result?: PictureBook  // 完成后返回完整结果
+  error?: string
+}
+
+/**
+ * 异步生成绘本（新版 API，立即返回 task_id）
+ * 避免 Cloudflare 524 超时
+ */
+export async function generatePictureBookAsync(params: GeneratePictureBookParams): Promise<AsyncPictureBookResponse> {
+  console.log('[generatePictureBookAsync] 发起异步请求')
+  return request.post<AsyncPictureBookResponse>('/content/picture-book/async', params, {
+    showLoading: false,
+    showError: true,
+    timeout: 30000  // 只是提交任务，30秒足够
+  })
+}
+
+/**
+ * 获取绘本生成任务状态
+ */
+export async function getPictureBookTaskStatus(taskId: string): Promise<PictureBookTaskStatus> {
+  return request.get<PictureBookTaskStatus>(`/content/picture-book/status/${taskId}`)
 }
 
 /**

@@ -87,7 +87,9 @@ npm run build:mp-weixin
 ### API 基础信息
 - Base URL: `https://kids.jackverse.cn/api/v1`
 - 主要接口:
-  - `POST /content/picture-book` - 生成绘本（超时3分钟）
+  - `POST /content/picture-book` - 生成绘本（同步模式，已废弃）
+  - `POST /content/picture-book/async` - 生成绘本（**异步模式，推荐**）
+  - `GET /content/picture-book/status/{task_id}` - 查询绘本生成状态
   - `POST /content/nursery-rhyme` - 生成儿歌（同步模式，已废弃）
   - `POST /content/nursery-rhyme/async` - 生成儿歌（**异步模式，推荐**）
   - `GET /content/nursery-rhyme/status/{task_id}` - 查询儿歌生成状态

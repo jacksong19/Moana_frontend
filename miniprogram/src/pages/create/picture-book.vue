@@ -172,7 +172,13 @@ import { onLoad } from '@dcloudio/uni-app'
 import { useChildStore } from '@/stores/child'
 import { useContentStore } from '@/stores/content'
 import GeneratingProgress from '@/components/GeneratingProgress/GeneratingProgress.vue'
-import type { ThemeItem } from '@/api/content'
+import {
+  generatePictureBookAsync,
+  getPictureBookTaskStatus,
+  getContentDetail,
+  type ThemeItem,
+  type PictureBook
+} from '@/api/content'
 
 const childStore = useChildStore()
 const contentStore = useContentStore()
@@ -330,7 +336,9 @@ async function startGenerate() {
     // 使用 currentChildAgeMonths 计算属性获取月龄
     const ageMonths = childStore.currentChildAgeMonths || 36 // 默认 3 岁
 
-    const result = await contentStore.createPictureBook({
+    // 1. 发起异步生成请求
+    console.log('[绘本] 发起异步生成请求')
+    const asyncResult = await generatePictureBookAsync({
       child_name: childStore.currentChild.name,
       age_months: ageMonths,
       theme_topic: selectedTheme.value.id,
@@ -338,33 +346,90 @@ async function startGenerate() {
       favorite_characters: selectedCharacters.value
     })
 
-    // 调试：打印后端返回的结果
-    console.log('生成绘本成功，后端返回:', JSON.stringify(result, null, 2))
-    console.log('result.id =', result.id, '类型:', typeof result.id)
+    const taskId = asyncResult.task_id
+    console.log('[绘本] 获取到 task_id:', taskId)
 
-    // 模拟进度完成
-    generatingProgress.value = 100
+    // 2. 轮询任务状态
+    const maxAttempts = 120  // 最多轮询 120 次（6 分钟）
+    const pollInterval = 3000  // 每 3 秒轮询一次
+    let attempts = 0
 
-    // 跳转到播放页
-    // 注意：后端目前不返回 id，所以使用 fromGenerate=1 标记，播放页直接使用 store 中的内容
-    setTimeout(() => {
+    const pollStatus = async (): Promise<PictureBook | null> => {
+      while (attempts < maxAttempts) {
+        attempts++
+        console.log(`[绘本] 轮询状态 第 ${attempts} 次`)
+
+        try {
+          const status = await getPictureBookTaskStatus(taskId)
+          console.log('[绘本] 状态:', status.status, '进度:', status.progress, '阶段:', status.stage)
+
+          // 更新进度条
+          generatingProgress.value = status.progress || Math.min(attempts * 2, 95)
+
+          // 检查完成状态
+          if (status.status === 'completed') {
+            generatingProgress.value = 100
+            // 优先使用 result，否则通过 content_id 获取详情
+            if (status.result) {
+              console.log('[绘本] 从 result 获取完整数据')
+              return status.result
+            } else if (status.content_id) {
+              console.log('[绘本] 从 content_id 获取详情:', status.content_id)
+              const detail = await getContentDetail(status.content_id)
+              return detail as PictureBook
+            }
+            return null
+          }
+
+          // 检查失败状态
+          if (status.status === 'failed') {
+            throw new Error(status.error || '绘本生成失败')
+          }
+
+          // 等待后继续轮询
+          await new Promise(resolve => setTimeout(resolve, pollInterval))
+        } catch (e: any) {
+          console.error('[绘本] 轮询出错:', e)
+          // 网络错误时继续重试
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval))
+          }
+        }
+      }
+
+      throw new Error('生成超时，请稍后重试')
+    }
+
+    const result = await pollStatus()
+
+    if (result) {
+      console.log('[绘本] 生成成功:', result.id)
+
+      // 存储到临时存储，供播放页使用
+      uni.setStorageSync('temp_picture_book', result)
+
+      // 跳转到播放页
       isGenerating.value = false
-      // 严格检查 id 是否存在且有效（非空字符串、非 undefined、非 null）
-      if (result.id && typeof result.id === 'string' && result.id.trim() !== '') {
-        // 后端返回了有效 ID，正常跳转
+      if (result.id) {
         uni.redirectTo({
           url: `/pages/play/picture-book?id=${result.id}`
         })
       } else {
-        // 后端未返回有效 ID，使用 store 中的数据
         uni.redirectTo({
           url: `/pages/play/picture-book?fromGenerate=1`
         })
       }
-    }, 500)
-  } catch (e) {
+    } else {
+      throw new Error('未获取到绘本数据')
+    }
+  } catch (e: any) {
+    console.error('[绘本] 生成失败:', e)
     isGenerating.value = false
-    uni.showToast({ title: '生成失败，请重试', icon: 'none' })
+    uni.showToast({
+      title: e.message || '生成失败，请重试',
+      icon: 'none',
+      duration: 3000
+    })
   }
 }
 
@@ -395,13 +460,6 @@ onLoad((options) => {
     }
   }
 })
-
-// 同步生成进度
-setInterval(() => {
-  if (isGenerating.value) {
-    generatingProgress.value = contentStore.generatingProgress
-  }
-}, 100)
 </script>
 
 <style lang="scss" scoped>
