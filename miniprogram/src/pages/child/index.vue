@@ -46,19 +46,39 @@
         <text class="empty-hint">请家长添加内容</text>
       </view>
 
-      <!-- 内容列表 -->
+      <!-- 素材库标题 -->
+      <view v-if="contentList.length > 0" class="library-header">
+        <text class="library-title">📦 我的宝贝盒子</text>
+      </view>
+
+      <!-- 内容列表 - 玩具盒子风格 -->
       <view v-if="contentList.length > 0" class="content-list">
         <view
           v-for="item in contentList"
           :key="item.id"
           class="list-item"
-          :class="{ active: currentContent?.id === item.id }"
+          :class="[
+            getContentTypeClass(item),
+            { active: currentContent?.id === item.id }
+          ]"
           @tap="selectContent(item)"
         >
-          <view class="item-cover">
-            <text>{{ getContentEmoji(item) }}</text>
+          <!-- 内容类型徽章 -->
+          <view class="item-badge">
+            <text>{{ getContentTypeBadge(item) }}</text>
           </view>
-          <text class="item-title">{{ item.title }}</text>
+          <!-- 图标区域 -->
+          <view class="item-icon-wrap">
+            <view class="item-icon">
+              <text>{{ getContentEmoji(item) }}</text>
+            </view>
+          </view>
+          <!-- 标题 -->
+          <text class="item-title">{{ formatTitle(item.title) }}</text>
+          <!-- 选中指示器 -->
+          <view v-if="currentContent?.id === item.id" class="item-indicator">
+            <text>▶</text>
+          </view>
         </view>
       </view>
     </view>
@@ -166,14 +186,60 @@ function selectContent(item: PictureBook) {
 function startPlay() {
   if (!currentContent.value) return
 
+  const content = currentContent.value as any
+  const type = content.content_type || 'picture_book'
+
+  // 根据内容类型跳转到对应播放器
+  const playerMap: Record<string, string> = {
+    'picture_book': '/pages/play/picture-book',
+    'nursery_rhyme': '/pages/play/nursery-rhyme',
+    'video': '/pages/play/video'
+  }
+
+  const playerPath = playerMap[type] || '/pages/play/picture-book'
+
   uni.navigateTo({
-    url: `/pages/play/picture-book?id=${currentContent.value.id}&autoplay=1`
+    url: `${playerPath}?id=${content.id}&autoplay=1`
   })
 }
 
-function getContentEmoji(item: PictureBook): string {
-  // 根据主题返回不同 emoji
-  return '📚'
+// 根据内容类型返回不同的 emoji 图标
+function getContentEmoji(item: any): string {
+  const type = item.content_type || 'picture_book'
+  const emojiMap: Record<string, string> = {
+    'picture_book': '📖',
+    'nursery_rhyme': '🎵',
+    'video': '🎬'
+  }
+  return emojiMap[type] || '📖'
+}
+
+// 根据内容类型返回 CSS 类名
+function getContentTypeClass(item: any): string {
+  const type = item.content_type || 'picture_book'
+  return `type-${type.replace('_', '-')}`
+}
+
+// 根据内容类型返回类型徽章文字
+function getContentTypeBadge(item: any): string {
+  const type = item.content_type || 'picture_book'
+  const badgeMap: Record<string, string> = {
+    'picture_book': '绘本',
+    'nursery_rhyme': '儿歌',
+    'video': '视频'
+  }
+  return badgeMap[type] || '绘本'
+}
+
+// 格式化标题，截取关键部分
+function formatTitle(title: string): string {
+  if (!title) return ''
+  // 移除 "的" 前面的名字，保留主题
+  const match = title.match(/的(.+)/)
+  if (match && match[1].length > 2) {
+    return match[1].slice(0, 6)
+  }
+  return title.slice(0, 6)
 }
 
 // 退出逻辑
@@ -491,29 +557,100 @@ onUnmounted(() => {
   color: $text-secondary;
 }
 
-// 内容列表
+// 素材库标题
+.library-header {
+  width: 100%;
+  margin-top: $spacing-lg;
+  margin-bottom: $spacing-sm;
+  text-align: center;
+}
+
+.library-title {
+  font-size: $font-md;
+  font-weight: $font-bold;
+  color: $text-secondary;
+  letter-spacing: 2rpx;
+}
+
+// 内容列表 - 玩具盒子风格
 .content-list {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: $spacing-md;
-  margin-top: $spacing-md;
+  gap: 24rpx;
+  padding: 0 $spacing-sm;
+  max-width: 650rpx;
 }
 
 .list-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 140rpx;
-  padding: $spacing-sm;
+  width: 180rpx;
+  padding: 20rpx 16rpx 16rpx;
   background: $bg-card;
-  border-radius: $radius-lg;
+  border-radius: 32rpx;
   border: 4rpx solid transparent;
-  transition: all $duration-fast;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
 
+  // 绘本 - 珊瑚粉色系
+  &.type-picture-book {
+    background: linear-gradient(160deg, #FFF5F3 0%, #FFE8E3 100%);
+    border-color: rgba(255, 138, 118, 0.3);
+
+    .item-icon-wrap {
+      background: linear-gradient(135deg, #FF8A76 0%, #FF6B6B 100%);
+    }
+    .item-badge {
+      background: #FF8A76;
+    }
+  }
+
+  // 儿歌 - 薄荷绿色系
+  &.type-nursery-rhyme {
+    background: linear-gradient(160deg, #F0FFF4 0%, #E0F5E9 100%);
+    border-color: rgba(102, 187, 106, 0.3);
+
+    .item-icon-wrap {
+      background: linear-gradient(135deg, #81C784 0%, #66BB6A 100%);
+    }
+    .item-badge {
+      background: #66BB6A;
+    }
+  }
+
+  // 视频 - 琥珀金色系
+  &.type-video {
+    background: linear-gradient(160deg, #FFFBF0 0%, #FFF3E0 100%);
+    border-color: rgba(255, 183, 77, 0.3);
+
+    .item-icon-wrap {
+      background: linear-gradient(135deg, #FFCA28 0%, #FFB74D 100%);
+    }
+    .item-badge {
+      background: #FFB74D;
+    }
+  }
+
+  // 选中状态 - 弹跳效果
   &.active {
+    transform: scale(1.08) translateY(-8rpx);
     border-color: $primary;
-    background: rgba($primary, 0.05);
+    box-shadow:
+      0 16rpx 40rpx rgba(255, 107, 107, 0.25),
+      0 0 0 4rpx rgba(255, 107, 107, 0.15);
+
+    .item-icon-wrap {
+      animation: wiggle 0.6s ease-in-out;
+    }
+
+    .item-indicator {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   &:active {
@@ -521,29 +658,90 @@ onUnmounted(() => {
   }
 }
 
-.item-cover {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: $radius-md;
-  background: $gradient-warm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: $spacing-xs;
+// 类型徽章
+.item-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 4rpx 16rpx;
+  border-radius: 0 28rpx 0 16rpx;
 
   text {
-    font-size: 40rpx;
+    font-size: 18rpx;
+    color: white;
+    font-weight: $font-semibold;
   }
 }
 
+// 图标外包装（带阴影）
+.item-icon-wrap {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12rpx;
+  box-shadow:
+    0 6rpx 16rpx rgba(0, 0, 0, 0.15),
+    inset 0 2rpx 4rpx rgba(255, 255, 255, 0.4);
+  transition: transform 0.3s ease;
+}
+
+// 内部图标
+.item-icon {
+  text {
+    font-size: 52rpx;
+    filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.2));
+  }
+}
+
+// 标题
 .item-title {
-  font-size: $font-xs;
+  font-size: 24rpx;
+  font-weight: $font-semibold;
   color: $text-primary;
   text-align: center;
+  line-height: 1.3;
+  max-width: 100%;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-all;
+}
+
+// 选中指示器
+.item-indicator {
+  position: absolute;
+  bottom: -4rpx;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  width: 40rpx;
+  height: 40rpx;
+  background: $primary;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 107, 0.4);
+
+  text {
+    font-size: 20rpx;
+    color: white;
+    margin-left: 4rpx;
+  }
+}
+
+// 图标晃动动画
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-4deg); }
+  80% { transform: rotate(4deg); }
 }
 
 // 退出区域

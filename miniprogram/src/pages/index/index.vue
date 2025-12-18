@@ -263,49 +263,96 @@ const todayDuration = computed(() => {
   return remainMins > 0 ? `${hours}小时${remainMins}分` : `${hours}小时`
 })
 
-// 混合推荐列表
-const mixedRecommendations = ref([
-  {
-    id: 'book_teeth',
-    type: 'book',
-    typeIcon: '📚',
-    typeLabel: '绘本',
-    icon: '🦷',
-    title: '刷牙好习惯',
-    desc: '培养口腔护理习惯',
-    theme: 'brushing_teeth'
-  },
-  {
-    id: 'song_abc',
-    type: 'song',
-    typeIcon: '🎵',
-    typeLabel: '儿歌',
-    icon: '🔤',
-    title: 'ABC字母歌',
-    desc: '轻松学习英文字母',
-    theme: 'abc_song'
-  },
-  {
-    id: 'book_veggie',
-    type: 'book',
-    typeIcon: '📚',
-    typeLabel: '绘本',
-    icon: '🥬',
-    title: '爱上蔬菜',
-    desc: '健康饮食启蒙',
-    theme: 'eating_vegetables'
-  },
-  {
-    id: 'song_sleep',
-    type: 'song',
-    typeIcon: '🎵',
-    typeLabel: '儿歌',
-    icon: '🌙',
-    title: '摇篮曲',
-    desc: '温柔旋律助眠',
-    theme: 'lullaby'
+// 灵感推荐池 - 使用 API 返回的主题 ID
+const inspirationPool = {
+  // 绘本主题（使用 API 的主题 ID）
+  book: [
+    { id: 'brush_teeth', icon: '🦷', title: '刷牙好习惯', desc: '培养口腔护理习惯' },
+    { id: 'no_picky_eating', icon: '🥦', title: '不挑食', desc: '健康饮食启蒙' },
+    { id: 'bedtime', icon: '🛏️', title: '按时睡觉', desc: '培养作息规律' },
+    { id: 'wash_hands', icon: '🧼', title: '洗手讲卫生', desc: '养成卫生习惯' },
+    { id: 'tidy_up', icon: '🧹', title: '收拾玩具', desc: '学会自己整理' },
+    { id: 'greeting', icon: '👋', title: '打招呼', desc: '礼貌小达人' },
+    { id: 'colors', icon: '🎨', title: '认识颜色', desc: '色彩启蒙之旅' },
+    { id: 'animals', icon: '🦁', title: '认识动物', desc: '动物王国探险' },
+    { id: 'numbers', icon: '🔢', title: '认识数字', desc: '数学启蒙乐园' },
+    { id: 'weather', icon: '🌤️', title: '认识天气', desc: '感受自然奥秘' },
+    { id: 'sharing', icon: '🤝', title: '学会分享', desc: '分享的快乐' },
+    { id: 'family', icon: '👨‍👩‍👧', title: '认识家人', desc: '温暖的家庭' }
+  ],
+  // 儿歌主题（使用 API 的主题 ID）
+  song: [
+    { id: 'brush_teeth', icon: '🦷', title: '刷牙歌', desc: '唱着歌儿刷刷牙' },
+    { id: 'no_picky_eating', icon: '🥦', title: '不挑食歌', desc: '吃蔬菜身体棒' },
+    { id: 'nap_time', icon: '😴', title: '午睡歌', desc: '温柔旋律助眠' },
+    { id: 'wash_hands', icon: '🧼', title: '洗手歌', desc: '七步洗手法' },
+    { id: 'colors', icon: '🌈', title: '颜色歌', desc: '唱出七彩世界' },
+    { id: 'animals', icon: '🐼', title: '动物歌', desc: '动物叫声大合唱' },
+    { id: 'numbers', icon: '🔢', title: '数字歌', desc: '数学启蒙儿歌' },
+    { id: 'happy', icon: '😄', title: '开心歌', desc: '快乐每一天' },
+    { id: 'vehicles', icon: '🚌', title: '交通工具歌', desc: '车车火车飞机' },
+    { id: 'greeting', icon: '👋', title: '打招呼歌', desc: '你好、再见' }
+  ]
+}
+
+// 基于日期的伪随机数生成器（每天相同的推荐）
+function getDailySeededRandom(seed: number): () => number {
+  return () => {
+    seed = (seed * 9301 + 49297) % 233280
+    return seed / 233280
   }
-])
+}
+
+// 动态生成今日灵感推荐
+const mixedRecommendations = computed(() => {
+  // 使用香港时间的日期作为种子（每天变化）
+  const now = new Date()
+  const hkOffset = 8 * 60 // UTC+8
+  const hkTime = new Date(now.getTime() + hkOffset * 60 * 1000)
+  const dateSeed = hkTime.getFullYear() * 10000 + (hkTime.getMonth() + 1) * 100 + hkTime.getDate()
+
+  const random = getDailySeededRandom(dateSeed)
+
+  // 从池中随机选择（Fisher-Yates 洗牌算法）
+  const shuffleArray = <T>(arr: T[]): T[] => {
+    const shuffled = [...arr]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled
+  }
+
+  // 随机选择 2 个绘本 + 2 个儿歌
+  const selectedBooks = shuffleArray(inspirationPool.book).slice(0, 2)
+  const selectedSongs = shuffleArray(inspirationPool.song).slice(0, 2)
+
+  // 混合并打乱顺序
+  const mixed = [
+    ...selectedBooks.map(item => ({
+      id: `book_${item.id}`,
+      type: 'book' as const,
+      typeIcon: '📚',
+      typeLabel: '绘本',
+      icon: item.icon,
+      title: item.title,
+      desc: item.desc,
+      theme: item.id
+    })),
+    ...selectedSongs.map(item => ({
+      id: `song_${item.id}`,
+      type: 'song' as const,
+      typeIcon: '🎵',
+      typeLabel: '儿歌',
+      icon: item.icon,
+      title: item.title,
+      desc: item.desc,
+      theme: item.id
+    }))
+  ]
+
+  return shuffleArray(mixed)
+})
 
 // 辅助方法
 function getTypeIcon(type: string) {
@@ -364,6 +411,7 @@ function goToPlay(item: PlayHistoryItem) {
 }
 
 function handleRecommend(item: any) {
+  console.log('[首页灵感] 点击推荐:', item.type, item.title, '主题ID:', item.theme)
   if (item.type === 'book') {
     uni.navigateTo({ url: `/pages/create/picture-book?theme=${item.theme}` })
   } else if (item.type === 'song') {

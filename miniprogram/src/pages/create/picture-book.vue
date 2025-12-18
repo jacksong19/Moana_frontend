@@ -371,8 +371,25 @@ const generatingProgress = ref(0)
 const childName = computed(() => childStore.currentChild?.name || '宝贝')
 
 const filteredThemes = computed(() => {
-  const themes = contentStore.themes?.[selectedCategory.value]?.themes || []
-  return themes.length > 0 ? themes : defaultThemes[selectedCategory.value] || []
+  const apiThemes = contentStore.themes?.[selectedCategory.value]?.themes || []
+  const fallbackThemes = defaultThemes[selectedCategory.value] || []
+
+  // 优先使用 API 主题，但如果为空则使用默认主题
+  let themes = apiThemes.length > 0 ? apiThemes : fallbackThemes
+
+  // 如果当前选中的主题不在列表中，将其添加进去（确保预选主题始终可见）
+  if (selectedTheme.value && selectedTheme.value.id) {
+    const exists = themes.some(t => t.id === selectedTheme.value!.id)
+    if (!exists) {
+      // 从默认主题中查找并添加
+      const fromDefault = fallbackThemes.find(t => t.id === selectedTheme.value!.id)
+      if (fromDefault) {
+        themes = [fromDefault, ...themes]
+      }
+    }
+  }
+
+  return themes
 })
 
 const currentArtStyleName = computed(() => {
@@ -397,42 +414,85 @@ const canNext = computed(() => {
   return true
 })
 
-// 默认主题（API 未返回时使用）
+// 默认主题（使用 API 的主题 ID，作为备用和灵感预选）
 const defaultThemes: Record<string, ThemeItem[]> = {
   habit: [
-    { id: 'brushing_teeth', name: '刷牙', subcategory: '生活习惯', age_range: [24, 48], keywords: [] },
-    { id: 'eating_vegetables', name: '吃蔬菜', subcategory: '饮食习惯', age_range: [24, 48], keywords: [] },
-    { id: 'sleeping_early', name: '早睡早起', subcategory: '作息习惯', age_range: [24, 60], keywords: [] },
-    { id: 'washing_hands', name: '洗手', subcategory: '卫生习惯', age_range: [18, 48], keywords: [] },
-    { id: 'tidying_up', name: '整理玩具', subcategory: '生活习惯', age_range: [30, 60], keywords: [] },
-    { id: 'polite_words', name: '礼貌用语', subcategory: '行为习惯', age_range: [24, 60], keywords: [] }
+    { id: 'brush_teeth', name: '刷牙', subcategory: '生活习惯', age_range: [24, 48], keywords: [] },
+    { id: 'wash_hands', name: '洗手', subcategory: '卫生习惯', age_range: [18, 48], keywords: [] },
+    { id: 'get_dressed', name: '穿衣', subcategory: '生活习惯', age_range: [24, 48], keywords: [] },
+    { id: 'potty_training', name: '如厕', subcategory: '生活习惯', age_range: [18, 36], keywords: [] },
+    { id: 'eat_independently', name: '自己吃饭', subcategory: '生活习惯', age_range: [18, 36], keywords: [] },
+    { id: 'no_picky_eating', name: '不挑食', subcategory: '饮食习惯', age_range: [24, 48], keywords: [] },
+    { id: 'bedtime', name: '按时睡觉', subcategory: '作息习惯', age_range: [24, 60], keywords: [] },
+    { id: 'nap_time', name: '午睡', subcategory: '作息习惯', age_range: [18, 48], keywords: [] },
+    { id: 'sharing', name: '分享', subcategory: '社交能力', age_range: [24, 60], keywords: [] },
+    { id: 'greeting', name: '打招呼', subcategory: '行为习惯', age_range: [18, 48], keywords: [] },
+    { id: 'tidy_up', name: '收拾玩具', subcategory: '生活习惯', age_range: [30, 60], keywords: [] }
   ],
   cognition: [
-    { id: 'colors', name: '认识颜色', subcategory: '基础认知', age_range: [12, 36], keywords: [] },
-    { id: 'animals', name: '认识动物', subcategory: '自然认知', age_range: [12, 48], keywords: [] },
-    { id: 'numbers', name: '认识数字', subcategory: '数学启蒙', age_range: [24, 48], keywords: [] },
-    { id: 'seasons', name: '四季变化', subcategory: '自然认知', age_range: [30, 60], keywords: [] },
-    { id: 'body_parts', name: '认识身体', subcategory: '基础认知', age_range: [18, 36], keywords: [] },
+    { id: 'colors', name: '颜色', subcategory: '基础认知', age_range: [12, 36], keywords: [] },
+    { id: 'shapes', name: '形状', subcategory: '基础认知', age_range: [18, 36], keywords: [] },
+    { id: 'numbers', name: '数字', subcategory: '数学启蒙', age_range: [24, 48], keywords: [] },
+    { id: 'big_small', name: '大小', subcategory: '基础认知', age_range: [12, 36], keywords: [] },
+    { id: 'animals', name: '动物', subcategory: '自然认知', age_range: [12, 48], keywords: [] },
+    { id: 'plants', name: '植物', subcategory: '自然认知', age_range: [24, 48], keywords: [] },
+    { id: 'weather', name: '天气', subcategory: '自然认知', age_range: [24, 48], keywords: [] },
+    { id: 'family', name: '家庭成员', subcategory: '社会认知', age_range: [18, 36], keywords: [] },
+    { id: 'occupations', name: '职业', subcategory: '社会认知', age_range: [30, 60], keywords: [] },
     { id: 'vehicles', name: '交通工具', subcategory: '生活认知', age_range: [18, 48], keywords: [] }
   ],
   emotion: [
-    { id: 'sharing', name: '学会分享', subcategory: '社交能力', age_range: [24, 60], keywords: [] },
-    { id: 'making_friends', name: '交朋友', subcategory: '社交能力', age_range: [30, 60], keywords: [] },
-    { id: 'managing_anger', name: '控制情绪', subcategory: '情绪管理', age_range: [30, 60], keywords: [] },
-    { id: 'courage', name: '勇敢', subcategory: '性格培养', age_range: [30, 72], keywords: [] },
-    { id: 'love_family', name: '爱家人', subcategory: '情感培养', age_range: [18, 60], keywords: [] },
-    { id: 'helping_others', name: '帮助他人', subcategory: '社交能力', age_range: [30, 60], keywords: [] }
+    { id: 'happy', name: '开心', subcategory: '情绪认知', age_range: [18, 48], keywords: [] },
+    { id: 'sad', name: '难过', subcategory: '情绪认知', age_range: [24, 48], keywords: [] },
+    { id: 'angry', name: '生气', subcategory: '情绪管理', age_range: [24, 60], keywords: [] },
+    { id: 'scared', name: '害怕', subcategory: '情绪管理', age_range: [24, 60], keywords: [] }
   ]
 }
 
-// 主题图标映射
+// 主题图标映射（覆盖 API 返回的所有主题 ID）
 const themeIcons: Record<string, string> = {
-  brushing_teeth: '🦷', eating_vegetables: '🥬', sleeping_early: '🌙',
-  washing_hands: '🧼', tidying_up: '🧸', polite_words: '👋',
-  colors: '🎨', animals: '🦁', numbers: '🔢',
-  seasons: '🍂', body_parts: '👋', vehicles: '🚗',
-  sharing: '🤝', making_friends: '👫', managing_anger: '😤',
-  courage: '💪', love_family: '❤️', helping_others: '🤗'
+  // ===== 习惯养成 (API 返回的 ID) =====
+  brush_teeth: '🦷',         // 刷牙
+  wash_hands: '🧼',          // 洗手
+  get_dressed: '👕',         // 穿衣
+  potty_training: '🚽',      // 如厕
+  eat_independently: '🥄',   // 自己吃饭
+  no_picky_eating: '🥦',     // 不挑食
+  bedtime: '🛏️',             // 按时睡觉
+  nap_time: '😴',            // 午睡
+  sharing: '🤝',             // 分享
+  greeting: '👋',            // 打招呼
+  tidy_up: '🧹',             // 收拾玩具
+  // ===== 认知世界 (API 返回的 ID) =====
+  colors: '🎨',              // 颜色
+  shapes: '🔷',              // 形状
+  numbers: '🔢',             // 数字
+  big_small: '📏',           // 大小
+  animals: '🦁',             // 动物
+  plants: '🌱',              // 植物
+  weather: '🌤️',             // 天气
+  family: '👨‍👩‍👧',              // 家庭成员
+  occupations: '👨‍⚕️',          // 职业
+  vehicles: '🚗',            // 交通工具
+  // ===== 情绪 (API 返回的 ID) =====
+  happy: '😊',               // 开心
+  sad: '😢',                 // 难过
+  angry: '😠',               // 生气
+  scared: '😨',              // 害怕
+  // ===== 本地备用 ID（兼容旧数据）=====
+  brushing_teeth: '🦷',
+  washing_hands: '🧼',
+  eating_vegetables: '🥦',
+  sleeping_early: '🛏️',
+  tidying_up: '🧹',
+  polite_words: '💬',
+  seasons: '🍂',
+  body_parts: '🖐️',
+  making_friends: '👭',
+  managing_anger: '😌',
+  courage: '💪',
+  love_family: '🏠',
+  helping_others: '🤗'
 }
 
 function getThemeIcon(id: string): string {
@@ -591,14 +651,19 @@ onMounted(() => {
 
 onLoad((options) => {
   if (options?.theme) {
-    for (const catId of Object.keys(defaultThemes)) {
-      const found = defaultThemes[catId].find(t => t.id === options.theme)
-      if (found) {
-        selectedCategory.value = catId
-        selectedTheme.value = found
-        break
+    const themeId = options.theme
+
+    // 延迟执行确保组件已初始化
+    setTimeout(() => {
+      for (const catId of Object.keys(defaultThemes)) {
+        const found = defaultThemes[catId].find(t => t.id === themeId)
+        if (found) {
+          selectedCategory.value = catId
+          selectedTheme.value = found
+          break
+        }
       }
-    }
+    }, 100)
   }
 })
 </script>
