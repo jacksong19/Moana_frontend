@@ -35,12 +35,9 @@
       scroll-y
       @scrolltolower="loadMore"
     >
-      <view v-if="loading && contentList.length === 0" class="loading-state">
-        <view class="loading-spinner">
-          <view class="spinner-ring"></view>
-          <text class="spinner-icon">🌊</text>
-        </view>
-        <text class="loading-text">加载中...</text>
+      <!-- 骨架屏加载状态 -->
+      <view v-if="loading && contentList.length === 0" class="skeleton-grid">
+        <SkeletonCard v-for="i in 4" :key="i" type="vertical" />
       </view>
 
       <view v-else-if="contentList.length === 0" class="empty-state">
@@ -107,6 +104,7 @@ import { ref, computed, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useContentStore } from '@/stores/content'
 import type { PictureBook } from '@/api/content'
+import SkeletonCard from '@/components/SkeletonCard/SkeletonCard.vue'
 
 const contentStore = useContentStore()
 
@@ -523,54 +521,11 @@ onShow(() => {
   color: $text-tertiary;
 }
 
-// === 加载状态 ===
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 200rpx 0;
-}
-
-.loading-spinner {
-  position: relative;
-  width: 100rpx;
-  height: 100rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24rpx;
-}
-
-.spinner-ring {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 3rpx solid $border-light;
-  border-top-color: $primary;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.spinner-icon {
-  font-size: 48rpx;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-.loading-text {
-  font-size: $font-base;
-  color: $text-tertiary;
+// === 骨架屏加载状态 ===
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
 }
 
 // === 空状态 ===

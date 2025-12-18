@@ -84,6 +84,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import NavBar from '@/components/NavBar/NavBar.vue'
+import { submitFeedback } from '@/api/feedback'
 
 const feedbackTypes = [
   { value: 'bug', name: '程序问题', icon: '🐛' },
@@ -133,9 +134,13 @@ async function handleSubmit() {
 
   submitting.value = true
 
-  // 模拟提交
-  setTimeout(() => {
-    submitting.value = false
+  try {
+    await submitFeedback({
+      type: selectedType.value as 'bug' | 'content' | 'suggest' | 'other',
+      content: content.value.trim(),
+      contact: contact.value.trim() || undefined
+    })
+
     uni.showToast({ title: '感谢您的反馈！', icon: 'success' })
 
     // 清空表单
@@ -145,7 +150,14 @@ async function handleSubmit() {
     setTimeout(() => {
       uni.navigateBack()
     }, 1500)
-  }, 1000)
+  } catch (e: any) {
+    uni.showToast({
+      title: e.message || '提交失败，请重试',
+      icon: 'none'
+    })
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 

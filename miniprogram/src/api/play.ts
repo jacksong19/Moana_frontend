@@ -30,13 +30,36 @@ export interface PlayHistoryItem {
   is_completed: boolean
 }
 
-// 播放统计接口 (匹配后端 PlayStatsResponse)
-export interface PlayStats {
+// 答题统计接口 (匹配后端 PlayStatsResponse)
+export interface QuestionStats {
   total_questions: number
   correct_count: number
   accuracy_rate: number
   by_type: Record<string, { total: number; correct: number }>
 }
+
+// 综合学习统计接口 (匹配后端 LearningStatsResponse)
+export interface LearningStats {
+  total_duration_minutes: number
+  total_books: number
+  total_songs: number
+  total_videos: number
+  streak_days: number
+  interaction_rate: number
+  daily_activity: Array<{
+    date: string
+    has_activity: boolean
+    duration_minutes: number
+  }>
+  top_themes: Array<{
+    theme_id: string
+    theme_name: string
+    count: number
+  }>
+}
+
+// 向后兼容的别名
+export type PlayStats = QuestionStats
 
 // 更新进度响应
 export interface UpdateProgressResponse {
@@ -138,4 +161,14 @@ export async function getPlayHistory(childId: string, params?: {
  */
 export async function getPlayStats(childId: string): Promise<PlayStats> {
   return request.get<PlayStats>(`/play/stats/${childId}`)
+}
+
+/**
+ * 获取综合学习统计
+ * @param days 统计天数，默认7天
+ */
+export async function getLearningStats(childId: string, days: number = 7): Promise<LearningStats> {
+  return request.get<LearningStats>(`/play/learning-stats/${childId}`, {
+    data: { days }
+  })
 }

@@ -83,7 +83,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useChildStore } from '@/stores/child'
-import { getPlayStats } from '@/api/play'
+import { getLearningStats, getPlayStats, type LearningStats } from '@/api/play'
 import NavBar from '@/components/NavBar/NavBar.vue'
 
 const childStore = useChildStore()
@@ -123,26 +123,94 @@ const encourageText = computed(() => {
   }
 })
 
+// 主题图标映射
+const themeIcons: Record<string, string> = {
+  habit: '🌟',
+  cognition: '🌍',
+  emotion: '💝',
+  brush_teeth: '🦷',
+  wash_hands: '🧼',
+  sharing: '🤝',
+  colors: '🎨',
+  animals: '🦁',
+  numbers: '🔢'
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}分钟`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return mins > 0 ? `${hours}小时${mins}分` : `${hours}小时`
+}
+
+function updateWeekDays(dailyActivity: LearningStats['daily_activity']) {
+  const today = new Date()
+  const dayOfWeek = today.getDay() || 7
+
+  weekDays.value = weekDays.value.map((day, index) => {
+    const diff = index + 1 - dayOfWeek
+    const date = new Date(today)
+    date.setDate(today.getDate() + diff)
+    const dateStr = date.toISOString().split('T')[0]
+
+    // 从 API 数据中查找当天活动
+    const activity = dailyActivity.find(a => a.date === dateStr)
+
+    return {
+      ...day,
+      date: dateStr,
+      isToday: diff === 0,
+      hasActivity: activity?.has_activity || false
+    }
+  })
+}
+
+function updateTopTopics(themes: LearningStats['top_themes']) {
+  if (themes.length > 0) {
+    topTopics.value = themes.slice(0, 3).map(t => ({
+      name: t.theme_name,
+      icon: themeIcons[t.theme_id] || '📚',
+      count: t.count
+    }))
+  }
+}
+
 async function loadStats() {
   if (!childStore.currentChild) return
 
   try {
-    const res = await getPlayStats(childStore.currentChild.id)
-    // 从答题统计中获取数据
+    // 尝试获取综合学习统计
+    const data = await getLearningStats(childStore.currentChild.id)
+
     stats.value = {
-      totalDuration: '30分钟', // 模拟数据，后续可从播放历史计算
-      totalBooks: res.total_questions > 0 ? Math.ceil(res.total_questions / 3) : 0,
-      streakDays: 3, // 模拟数据
-      interactionRate: Math.round(res.accuracy_rate * 100)
+      totalDuration: formatDuration(data.total_duration_minutes),
+      totalBooks: data.total_books + data.total_songs + data.total_videos,
+      streakDays: data.streak_days,
+      interactionRate: Math.round(data.interaction_rate * 100)
     }
+
+    updateWeekDays(data.daily_activity)
+    updateTopTopics(data.top_themes)
   } catch (e) {
-    console.log('加载统计失败')
+    console.log('综合统计 API 未就绪，尝试答题统计')
+    // 降级到答题统计
+    try {
+      const res = await getPlayStats(childStore.currentChild.id)
+      stats.value = {
+        totalDuration: '0分钟',
+        totalBooks: res.total_questions > 0 ? Math.ceil(res.total_questions / 3) : 0,
+        streakDays: 0,
+        interactionRate: Math.round(res.accuracy_rate * 100)
+      }
+    } catch {
+      console.log('加载统计失败，使用默认值')
+    }
   }
 }
 
 function initWeekDays() {
   const today = new Date()
-  const dayOfWeek = today.getDay() || 7 // 周日是0，转为7
+  const dayOfWeek = today.getDay() || 7
 
   weekDays.value = weekDays.value.map((day, index) => {
     const diff = index + 1 - dayOfWeek
@@ -153,7 +221,7 @@ function initWeekDays() {
       ...day,
       date: date.toISOString().split('T')[0],
       isToday: diff === 0,
-      hasActivity: diff <= 0 && Math.random() > 0.3 // 模拟数据
+      hasActivity: false // 默认无活动，API 返回后更新
     }
   })
 }

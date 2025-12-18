@@ -117,7 +117,23 @@
       </view>
       <text class="complete-title">故事结束啦！</text>
       <text class="complete-subtitle">{{ content?.title }}</text>
+      <view class="complete-actions">
+        <view class="action-btn share-btn" @tap.stop="handleSharePoster">
+          <text class="btn-icon">📤</text>
+          <text class="btn-text">分享海报</text>
+        </view>
+        <view class="action-btn close-btn" @tap.stop="closeComplete">
+          <text class="btn-text">返回</text>
+        </view>
+      </view>
     </view>
+
+    <!-- 海报生成画布（隐藏） -->
+    <canvas
+      canvas-id="posterCanvas"
+      class="poster-canvas"
+      style="position: fixed; left: -9999px; width: 540px; height: 960px;"
+    />
 
     <!-- 时间提醒 -->
     <view v-if="showTimeWarning" class="time-overlay">
@@ -139,12 +155,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, getCurrentInstance } from 'vue'
 import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { useChildStore } from '@/stores/child'
 import { useContentStore } from '@/stores/content'
 import { startPlay, updateProgress, completePlay, submitInteraction } from '@/api/play'
 import timeLimitManager from '@/utils/time-limit'
+import { generatePoster, savePosterToAlbum } from '@/utils/poster'
 import type { PictureBook, PictureBookPage } from '@/api/content'
 
 const childStore = useChildStore()
@@ -175,6 +192,10 @@ const showTimeWarning = ref(false)
 const warningType = ref<'rest' | 'session' | 'daily'>('rest')
 const warningTitle = ref('')
 const warningMessage = ref('')
+
+// 海报分享
+const generatingPoster = ref(false)
+const instance = getCurrentInstance()
 
 // 音频
 let audioContext: UniApp.InnerAudioContext | null = null
@@ -434,9 +455,18 @@ async function handleComplete() {
 
   timeLimitManager.endSession()
 
+  // 延长等待时间，给用户分享海报的机会
   setTimeout(() => {
-    uni.navigateBack()
-  }, 2500)
+    if (showComplete.value && !generatingPoster.value) {
+      uni.navigateBack()
+    }
+  }, 8000)
+}
+
+// 关闭完成界面
+function closeComplete() {
+  if (generatingPoster.value) return
+  uni.navigateBack()
 }
 
 // 互动
@@ -508,6 +538,38 @@ function handleClose() {
   stopCurrentAudio()
   timeLimitManager.endSession()
   uni.navigateBack()
+}
+
+// 生成分享海报
+async function handleSharePoster() {
+  if (!content.value || generatingPoster.value) return
+
+  generatingPoster.value = true
+  uni.showLoading({ title: '生成海报中...', mask: true })
+
+  try {
+    const posterPath = await generatePoster('posterCanvas', {
+      title: content.value.title || '童话绘本',
+      coverUrl: content.value.pages?.[0]?.image_url || content.value.cover_url || '',
+      childName: childStore.currentChild?.name || '宝贝',
+      theme: content.value.theme_topic || ''
+    }, instance)
+
+    uni.hideLoading()
+
+    // 保存到相册
+    await savePosterToAlbum(posterPath)
+    uni.showToast({ title: '已保存到相册', icon: 'success' })
+  } catch (e: any) {
+    uni.hideLoading()
+    console.error('[海报生成失败]', e)
+    uni.showToast({
+      title: e.message || '生成失败，请重试',
+      icon: 'none'
+    })
+  } finally {
+    generatingPoster.value = false
+  }
 }
 
 // 加载内容 - 优化：优先使用临时存储
@@ -1116,6 +1178,49 @@ $font-story: -apple-system, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
 .complete-subtitle {
   font-size: 28rpx;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.complete-actions {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 48rpx;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 20rpx 40rpx;
+  border-radius: 100rpx;
+  transition: transform 0.2s ease;
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.share-btn {
+  background: linear-gradient(135deg, $story-gold, #FF9500);
+  box-shadow: 0 8rpx 24rpx rgba($story-gold, 0.4);
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2rpx solid rgba(255, 255, 255, 0.3);
+
+  .btn-text {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+.btn-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $story-night;
 }
 
 // 时间提醒
