@@ -56,8 +56,24 @@ export interface PictureBook {
   created_at: string
 }
 
-// 艺术风格类型
-export type ArtStyle = 'pixar_3d' | 'watercolor' | 'flat_vector' | 'crayon' | 'anime'
+// 艺术风格类型（Gemini 服务扩展）
+export type ArtStyle =
+  // 儿童内容风格
+  | 'storybook' | 'cartoon' | 'watercolor' | 'flat'
+  // 3D 风格
+  | 'pixar_3d' | '3d_render' | '3d_cartoon' | 'clay' | 'pixar' | 'figurine'
+  // 动漫风格
+  | 'anime' | 'chibi' | 'manga' | 'ghibli'
+  // 写实风格
+  | 'photorealistic' | 'cinematic' | 'portrait'
+  // 艺术风格
+  | 'oil_painting' | 'sketch' | 'ink_wash' | 'pixel_art' | 'vector' | 'pop_art'
+  // 特殊风格
+  | 'cyberpunk' | 'fantasy' | 'vintage' | 'minimalist' | 'surreal'
+  // 无风格
+  | 'none'
+  // 向后兼容旧值
+  | 'flat_vector' | 'crayon'
 
 // 主角动物类型
 export type ProtagonistAnimal = 'bunny' | 'bear' | 'cat' | 'dog' | 'panda' | 'fox'
@@ -65,15 +81,22 @@ export type ProtagonistAnimal = 'bunny' | 'bear' | 'cat' | 'dog' | 'panda' | 'fo
 // 色调类型
 export type ColorPalette = 'pastel' | 'vibrant' | 'warm' | 'cool' | 'monochrome'
 
-// TTS 音色 ID（后端实测支持的 6 个音色）
-export type VoiceId = 'Cherry' | 'Jennifer' | 'Kiki' | 'Ethan' | 'Ryan' | 'Nofish'
+// Gemini TTS 音色 ID（新默认）
+export type GeminiVoiceId = 'Kore' | 'Leda' | 'Aoede' | 'Puck' | 'Charon' | 'Fenrir'
+
+// Qwen TTS 音色 ID（备选）
+export type QwenVoiceId = 'Cherry' | 'Jennifer' | 'Kiki' | 'Ethan' | 'Ryan' | 'Nofish'
+
+// TTS 音色 ID（支持两套音色系统）
+export type VoiceId = GeminiVoiceId | QwenVoiceId
 
 // TTS 音色配置
 export interface VoiceOption {
   id: VoiceId
   name: string        // 中文名
-  gender: 'female' | 'male'
+  gender: 'female' | 'male' | 'neutral'
   style: string       // 风格描述
+  emoji?: string      // 展示图标
   recommended?: boolean
 }
 
@@ -322,12 +345,13 @@ const DEFAULT_STYLE_OPTIONS: StyleOptions = {
     { id: 'static', name: '静态展示', description: '稳定清晰的展示效果' }
   ],
   tts_voices: [
-    { id: 'Cherry', name: '芊悦', gender: 'female', style: '温柔亲切', recommended: true },
-    { id: 'Jennifer', name: '詹妮弗', gender: 'female', style: '清晰标准' },
-    { id: 'Kiki', name: '阿清', gender: 'female', style: '粤语' },
-    { id: 'Ethan', name: '晨煦', gender: 'male', style: '成熟稳重' },
-    { id: 'Ryan', name: '甜茶', gender: 'male', style: '温暖亲和' },
-    { id: 'Nofish', name: '不吃鱼', gender: 'male', style: '活泼有趣' }
+    // Gemini TTS 音色（默认）
+    { id: 'Kore', name: '温暖女声', gender: 'female', style: '温暖亲切', emoji: '🌟', recommended: true },
+    { id: 'Leda', name: '柔和女声', gender: 'female', style: '柔和舒缓', emoji: '🌙' },
+    { id: 'Aoede', name: '清晰女声', gender: 'female', style: '清晰标准', emoji: '📚' },
+    { id: 'Puck', name: '活泼中性', gender: 'neutral', style: '活泼有趣', emoji: '🎈' },
+    { id: 'Charon', name: '沉稳男声', gender: 'male', style: '沉稳大气', emoji: '👔' },
+    { id: 'Fenrir', name: '深沉男声', gender: 'male', style: '深沉有力', emoji: '🎭' }
   ],
   video_options: {
     models: [

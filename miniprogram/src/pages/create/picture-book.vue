@@ -84,7 +84,7 @@
         </view>
 
         <view class="style-sections">
-          <!-- 艺术风格 - 大卡片展示 -->
+          <!-- 艺术风格 - 分类展示 -->
           <view class="style-section art-section">
             <view class="section-header">
               <view class="section-icon-wrap">
@@ -92,12 +92,26 @@
               </view>
               <text class="section-title">艺术风格</text>
             </view>
+            <!-- 风格分类 Tab -->
+            <view class="style-category-tabs">
+              <view
+                v-for="cat in styleCategories"
+                :key="cat.id"
+                class="style-tab-item"
+                :class="{ active: selectedStyleCategory === cat.id }"
+                @tap="selectedStyleCategory = cat.id"
+              >
+                <text class="style-tab-icon">{{ cat.icon }}</text>
+                <text class="style-tab-name">{{ cat.name }}</text>
+              </view>
+            </view>
+            <!-- 风格卡片 -->
             <view class="art-style-carousel">
               <view
-                v-for="style in artStyles"
+                v-for="style in currentCategoryStyles"
                 :key="style.value"
                 class="art-card"
-                :class="{ selected: selectedArtStyle === style.value, recommended: style.value === 'pixar_3d' }"
+                :class="{ selected: selectedArtStyle === style.value, recommended: style.recommended }"
                 @tap="selectedArtStyle = style.value"
               >
                 <view class="art-card-bg" :class="style.value"></view>
@@ -109,7 +123,7 @@
                 <view v-if="selectedArtStyle === style.value" class="art-check">
                   <text>✓</text>
                 </view>
-                <view v-if="style.value === 'pixar_3d'" class="art-badge">推荐</view>
+                <view v-if="style.recommended" class="art-badge">推荐</view>
               </view>
             </view>
           </view>
@@ -204,7 +218,7 @@
                     <text class="voice-name">{{ voice.name }}</text>
                     <text v-if="voice.recommended" class="voice-badge">推荐</text>
                     <text class="voice-gender-tag" :class="voice.gender">
-                      {{ voice.gender === 'female' ? '女声' : '男声' }}
+                      {{ voice.gender === 'female' ? '女声' : voice.gender === 'male' ? '男声' : '中性' }}
                     </text>
                   </view>
                   <text class="voice-style">{{ voice.style }}</text>
@@ -320,15 +334,48 @@ const themeCategories = [
 const selectedCategory = ref('habit')
 const selectedTheme = ref<ThemeItem | null>(null)
 
-// 艺术风格选项
-const artStyles = [
-  { value: 'pixar_3d' as ArtStyle, label: '3D 动画', icon: '🎬', desc: '皮克斯风格' },
-  { value: 'watercolor' as ArtStyle, label: '水彩', icon: '🎨', desc: '柔和温馨' },
-  { value: 'flat_vector' as ArtStyle, label: '扁平插画', icon: '✨', desc: '现代简约' },
-  { value: 'crayon' as ArtStyle, label: '蜡笔画', icon: '🖍️', desc: '童趣手绘' },
-  { value: 'anime' as ArtStyle, label: '日系动漫', icon: '🌸', desc: '可爱细腻' }
+// 风格分类（按后端 Gemini 配置文档）
+const styleCategories = [
+  { id: 'children', name: '儿童内容', icon: '📚' },
+  { id: '3d', name: '3D 风格', icon: '🎬' },
+  { id: 'anime', name: '动漫风格', icon: '🌸' },
+  { id: 'artistic', name: '艺术风格', icon: '🎨' }
 ]
-const selectedArtStyle = ref<ArtStyle>('pixar_3d')
+const selectedStyleCategory = ref('children')
+
+// 按分类的艺术风格选项
+const artStylesByCategory: Record<string, Array<{ value: ArtStyle; label: string; icon: string; desc: string; recommended?: boolean }>> = {
+  children: [
+    { value: 'storybook' as ArtStyle, label: '绘本风格', icon: '📖', desc: '温暖色调', recommended: true },
+    { value: 'cartoon' as ArtStyle, label: '卡通风格', icon: '🎨', desc: '鲜艳色彩' },
+    { value: 'watercolor' as ArtStyle, label: '水彩风格', icon: '💧', desc: '梦幻氛围' },
+    { value: 'flat' as ArtStyle, label: '扁平风格', icon: '✨', desc: '简洁几何' }
+  ],
+  '3d': [
+    { value: 'pixar' as ArtStyle, label: '皮克斯', icon: '🎬', desc: '动画电影' },
+    { value: '3d_cartoon' as ArtStyle, label: '3D 卡通', icon: '🧸', desc: '柔和阴影' },
+    { value: 'clay' as ArtStyle, label: '粘土风格', icon: '🎭', desc: '手工质感' },
+    { value: 'figurine' as ArtStyle, label: '手办风格', icon: '🎎', desc: '收藏品风' }
+  ],
+  anime: [
+    { value: 'anime' as ArtStyle, label: '日式动漫', icon: '🌸', desc: '细致眼睛' },
+    { value: 'chibi' as ArtStyle, label: 'Q版萌系', icon: '🎀', desc: '大头小身' },
+    { value: 'ghibli' as ArtStyle, label: '吉卜力', icon: '🏰', desc: '宫崎骏风' }
+  ],
+  artistic: [
+    { value: 'oil_painting' as ArtStyle, label: '油画', icon: '🖼️', desc: '古典纹理' },
+    { value: 'sketch' as ArtStyle, label: '素描', icon: '✏️', desc: '手绘线条' },
+    { value: 'ink_wash' as ArtStyle, label: '水墨画', icon: '🖌️', desc: '中国风' },
+    { value: 'pixel_art' as ArtStyle, label: '像素艺术', icon: '👾', desc: '复古游戏' }
+  ]
+}
+
+// 当前分类的风格列表
+const currentCategoryStyles = computed(() => {
+  return artStylesByCategory[selectedStyleCategory.value] || artStylesByCategory.children
+})
+
+const selectedArtStyle = ref<ArtStyle>('storybook')
 
 // 主角动物选项
 const protagonistAnimals = [
@@ -351,16 +398,16 @@ const colorPalettes = [
 ]
 const selectedPalette = ref<ColorPalette>('pastel')
 
-// TTS 音色选项（后端实测支持的 6 个音色）
-const voiceOptions = [
-  { id: 'Cherry' as VoiceId, name: '芊悦', gender: 'female', style: '温柔亲切', emoji: '🍒', recommended: true },
-  { id: 'Jennifer' as VoiceId, name: '詹妮弗', gender: 'female', style: '清晰标准', emoji: '🎀' },
-  { id: 'Kiki' as VoiceId, name: '阿清', gender: 'female', style: '粤语', emoji: '🌸' },
-  { id: 'Ethan' as VoiceId, name: '晨煦', gender: 'male', style: '成熟稳重', emoji: '👔' },
-  { id: 'Ryan' as VoiceId, name: '甜茶', gender: 'male', style: '温暖亲和', emoji: '🌟' },
-  { id: 'Nofish' as VoiceId, name: '不吃鱼', gender: 'male', style: '活泼有趣', emoji: '🐟' }
+// Gemini TTS 音色选项（默认）
+const voiceOptions: Array<{ id: VoiceId; name: string; gender: 'female' | 'male' | 'neutral'; style: string; emoji: string; recommended?: boolean }> = [
+  { id: 'Kore' as VoiceId, name: '温暖女声', gender: 'female', style: '温暖亲切', emoji: '🌟', recommended: true },
+  { id: 'Leda' as VoiceId, name: '柔和女声', gender: 'female', style: '柔和舒缓', emoji: '🌙' },
+  { id: 'Aoede' as VoiceId, name: '清晰女声', gender: 'female', style: '清晰标准', emoji: '📚' },
+  { id: 'Puck' as VoiceId, name: '活泼中性', gender: 'neutral', style: '活泼有趣', emoji: '🎈' },
+  { id: 'Charon' as VoiceId, name: '沉稳男声', gender: 'male', style: '沉稳大气', emoji: '👔' },
+  { id: 'Fenrir' as VoiceId, name: '深沉男声', gender: 'male', style: '深沉有力', emoji: '🎭' }
 ]
-const selectedVoiceId = ref<VoiceId>('Cherry')
+const selectedVoiceId = ref<VoiceId>('Kore')
 
 // 生成状态
 const isGenerating = ref(false)
@@ -392,7 +439,12 @@ const filteredThemes = computed(() => {
 })
 
 const currentArtStyleName = computed(() => {
-  return artStyles.find(s => s.value === selectedArtStyle.value)?.label || ''
+  // 从所有分类中查找选中的风格
+  for (const styles of Object.values(artStylesByCategory)) {
+    const found = styles.find(s => s.value === selectedArtStyle.value)
+    if (found) return found.label
+  }
+  return ''
 })
 
 const currentAnimalName = computed(() => {
@@ -1022,6 +1074,45 @@ onLoad((options) => {
   color: $text-tertiary;
 }
 
+// 风格分类 Tab
+.style-category-tabs {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+  overflow-x: auto;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.style-tab-item {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: $spacing-xs $spacing-sm;
+  background: $bg-soft;
+  border-radius: $radius-full;
+  border: 2rpx solid $border-light;
+  flex-shrink: 0;
+  transition: all $duration-fast;
+
+  &.active {
+    background: rgba($book-primary, 0.1);
+    border-color: $book-primary;
+  }
+}
+
+.style-tab-icon {
+  font-size: 20rpx;
+}
+
+.style-tab-name {
+  font-size: $font-xs;
+  color: $text-secondary;
+  white-space: nowrap;
+
+  .active & { color: $book-primary; font-weight: $font-medium; }
+}
+
 // 艺术风格卡片
 .art-style-carousel {
   display: flex;
@@ -1065,11 +1156,29 @@ onLoad((options) => {
   bottom: 0;
   opacity: 0.15;
 
-  &.pixar_3d { background: linear-gradient(145deg, #FF7B54 0%, #7FB285 50%, #F5A623 100%); }
+  // 儿童内容风格
+  &.storybook { background: linear-gradient(145deg, #FFB5BA 0%, #FFF5BA 50%, #C5F0A4 100%); }
+  &.cartoon { background: linear-gradient(145deg, #FF7B54 0%, #FFE66D 50%, #7FB285 100%); }
   &.watercolor { background: linear-gradient(145deg, #74B9FF 0%, #FFB347 50%, #4ECDC4 100%); }
+  &.flat { background: linear-gradient(145deg, #FFE66D 0%, #FF7B54 50%, #7FB285 100%); }
+  // 3D 风格
+  &.pixar { background: linear-gradient(145deg, #FF7B54 0%, #7FB285 50%, #F5A623 100%); }
+  &.pixar_3d { background: linear-gradient(145deg, #FF7B54 0%, #7FB285 50%, #F5A623 100%); }
+  &.\33d_cartoon { background: linear-gradient(145deg, #74B9FF 0%, #FFB5BA 50%, #C5F0A4 100%); }
+  &.clay { background: linear-gradient(145deg, #E8A87C 0%, #F7C566 50%, #FFE4C4 100%); }
+  &.figurine { background: linear-gradient(145deg, #A29BFE 0%, #81ECEC 50%, #FFB5BA 100%); }
+  // 动漫风格
+  &.anime { background: linear-gradient(145deg, #FFB6C1 0%, #7FB285 50%, #74B9FF 100%); }
+  &.chibi { background: linear-gradient(145deg, #FFB5BA 0%, #FFE66D 50%, #74B9FF 100%); }
+  &.ghibli { background: linear-gradient(145deg, #7FB285 0%, #74B9FF 50%, #FFE4C4 100%); }
+  // 艺术风格
+  &.oil_painting { background: linear-gradient(145deg, #8B4513 0%, #D2691E 50%, #F5DEB3 100%); }
+  &.sketch { background: linear-gradient(145deg, #2D3436 0%, #636E72 50%, #DFE6E9 100%); }
+  &.ink_wash { background: linear-gradient(145deg, #2D3436 0%, #B2BEC3 50%, #FFFFFF 100%); }
+  &.pixel_art { background: linear-gradient(145deg, #FF4757 0%, #3742FA 50%, #2ED573 100%); }
+  // 向后兼容旧风格
   &.flat_vector { background: linear-gradient(145deg, #FFE66D 0%, #FF7B54 50%, #7FB285 100%); }
   &.crayon { background: linear-gradient(145deg, #F5A623 0%, #FF7B54 50%, #7FB285 100%); }
-  &.anime { background: linear-gradient(145deg, #FFB6C1 0%, #7FB285 50%, #74B9FF 100%); }
 }
 
 .art-card-content {
@@ -1426,6 +1535,7 @@ onLoad((options) => {
 
   &.female { background: $book-light; color: $book-primary; }
   &.male { background: rgba(91, 164, 217, 0.2); color: #5ba4d9; }
+  &.neutral { background: $video-light; color: $video-primary; }
   &.child { background: $video-light; color: $video-primary; }
 }
 
