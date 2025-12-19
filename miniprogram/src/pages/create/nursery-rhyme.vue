@@ -19,8 +19,16 @@
     </view>
     <view class="nav-placeholder" :style="{ height: navHeight + 'px' }"></view>
 
-    <!-- 主内容 -->
-    <scroll-view class="main-scroll" scroll-y>
+    <!-- 模式选择（首次进入时显示） -->
+    <scroll-view v-if="showModeSelector" class="main-scroll" scroll-y>
+      <CreationModeSelector
+        content-type="nursery_rhyme"
+        @select="handleModeSelect"
+      />
+    </scroll-view>
+
+    <!-- 主内容（选择模式后显示） -->
+    <scroll-view v-else class="main-scroll" scroll-y>
       <!-- 步骤指示器 -->
       <view class="steps-indicator">
         <view
@@ -134,11 +142,19 @@
                 :class="{ selected: selectedAnimal === animal.value }"
                 @tap="selectedAnimal = animal.value"
               >
-                <view class="character-avatar">
-                  <text class="char-emoji">{{ animal.emoji }}</text>
+                <!-- 选中时的背景光晕 -->
+                <view class="char-glow"></view>
+                <!-- 角色头像区域 -->
+                <view class="character-avatar-wrap">
+                  <view class="character-avatar">
+                    <text class="char-emoji">{{ animal.emoji }}</text>
+                  </view>
+                  <!-- 选中时的星星徽章 -->
+                  <view v-if="selectedAnimal === animal.value" class="char-star">⭐</view>
                 </view>
+                <!-- 彩色舞台底座 -->
+                <view class="char-stage"></view>
                 <text class="char-name">{{ animal.label }}</text>
-                <view v-if="selectedAnimal === animal.value" class="char-ring"></view>
               </view>
             </view>
           </view>
@@ -152,7 +168,13 @@
         <text class="step-desc">检查设置，开始生成专属儿歌</text>
 
         <view class="confirm-card">
-          <view class="confirm-item">
+          <!-- 智能创作模式显示用户描述 -->
+          <view v-if="isSmartMode" class="confirm-item smart-prompt-item">
+            <text class="confirm-label">创作描述</text>
+            <text class="confirm-value smart-prompt">{{ customPrompt }}</text>
+          </view>
+          <!-- 普通模式显示主题 -->
+          <view v-else class="confirm-item">
             <text class="confirm-label">儿歌主题</text>
             <text class="confirm-value">{{ selectedTheme?.name }}</text>
           </view>
@@ -177,8 +199,8 @@
       </view>
     </scroll-view>
 
-    <!-- 底部按钮 -->
-    <view class="bottom-bar">
+    <!-- 底部按钮（模式选择器隐藏后显示） -->
+    <view v-if="!showModeSelector" class="bottom-bar">
       <view v-if="currentStep > 0" class="btn-secondary" @tap="prevStep">
         <text>上一步</text>
       </view>
@@ -208,6 +230,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { useChildStore } from '@/stores/child'
 import { useContentStore } from '@/stores/content'
 import GeneratingProgress from '@/components/GeneratingProgress/GeneratingProgress.vue'
+import CreationModeSelector from '@/components/CreationModeSelector/CreationModeSelector.vue'
 import { generateNurseryRhymeAsync, getNurseryRhymeTaskStatus, getContentDetail } from '@/api/content'
 import type {
   ThemeItem,
@@ -220,6 +243,11 @@ import type {
 
 const childStore = useChildStore()
 const contentStore = useContentStore()
+
+// 模式选择
+const showModeSelector = ref(true)
+const isSmartMode = ref(false)
+const customPrompt = ref('')
 
 // 导航栏
 const statusBarHeight = ref(20)
@@ -414,6 +442,33 @@ const themeIcons: Record<string, string> = {
 
 function getThemeIcon(id: string): string {
   return themeIcons[id] || '🎵'
+}
+
+// 模式选择处理
+function handleModeSelect(mode: 'preset' | 'smart', prompt?: string) {
+  showModeSelector.value = false
+
+  if (mode === 'smart') {
+    // 智能创作模式
+    isSmartMode.value = true
+    customPrompt.value = prompt || ''
+
+    // 创建虚拟主题
+    selectedTheme.value = {
+      id: 'smart_custom',
+      name: '智能创作',
+      subcategory: '自定义',
+      age_range: [12, 72],
+      keywords: []
+    }
+
+    // 跳过主题选择，直接进入风格设置
+    currentStep.value = 1
+  } else {
+    // 预设模式，从主题选择开始
+    isSmartMode.value = false
+    currentStep.value = 0
+  }
 }
 
 function selectTheme(theme: ThemeItem) {
@@ -680,7 +735,9 @@ async function startGenerate() {
 
     // 发起异步生成请求（新版 API，立即返回 task_id）
     console.log('[startGenerate] 发起异步生成请求')
-    const asyncResult = await generateNurseryRhymeAsync({
+
+    // 构建请求参数
+    const requestParams: Parameters<typeof generateNurseryRhymeAsync>[0] = {
       child_name: childStore.currentChild.name,
       age_months: ageMonths,
       theme_topic: selectedTheme.value.name,
@@ -690,7 +747,16 @@ async function startGenerate() {
       protagonist: {
         animal: selectedAnimal.value
       }
-    })
+    }
+
+    // 智能创作模式：添加 creation_mode 和 custom_prompt
+    if (isSmartMode.value && customPrompt.value) {
+      requestParams.creation_mode = 'smart'
+      requestParams.custom_prompt = customPrompt.value
+      console.log('[儿歌] 智能创作模式，描述:', customPrompt.value)
+    }
+
+    const asyncResult = await generateNurseryRhymeAsync(requestParams)
 
     console.log('[startGenerate] 异步请求返回:', asyncResult)
 
@@ -744,9 +810,43 @@ onMounted(() => {
   contentStore.fetchThemes()
 })
 
-// 处理传入的主题参数
+// 处理传入的参数
 onLoad((options) => {
+  // 从智能创作页面跳转过来（带完整参数）
+  if (options?.creation_mode === 'smart' && options?.custom_prompt) {
+    showModeSelector.value = false  // 隐藏模式选择器
+    isSmartMode.value = true
+    customPrompt.value = decodeURIComponent(options.custom_prompt)
+
+    // 设置从智能创作页面传递的参数
+    if (options.music_mood) {
+      selectedStyle.value = options.music_mood as MusicStyle
+    }
+    if (options.protagonist) {
+      selectedAnimal.value = options.protagonist as ProtagonistAnimal
+    }
+
+    // 智能创作模式：跳过主题选择，直接到确认步骤
+    selectedTheme.value = {
+      id: 'smart_custom',
+      name: '智能创作',
+      subcategory: '自定义',
+      age_range: [12, 72],
+      keywords: []
+    }
+
+    // 延迟跳转到确认步骤
+    setTimeout(() => {
+      currentStep.value = 2
+    }, 100)
+
+    return
+  }
+
+  // 从首页灵感推荐跳转过来（带主题参数）
   if (options?.theme) {
+    showModeSelector.value = false  // 隐藏模式选择器
+    isSmartMode.value = false
     const themeId = options.theme
 
     // 延迟执行确保组件已初始化
@@ -760,7 +860,12 @@ onLoad((options) => {
         }
       }
     }, 100)
+
+    return
   }
+
+  // 无参数：显示模式选择器（默认行为）
+  showModeSelector.value = true
 })
 </script>
 
@@ -1232,7 +1337,7 @@ onLoad((options) => {
 }
 
 // ==========================================
-// 角色选择 - 圆形头像卡片 (温暖花园主题)
+// 角色选择 - Happy Stage 设计 (温暖花园主题)
 // ==========================================
 .character-carousel {
   display: flex;
@@ -1241,24 +1346,46 @@ onLoad((options) => {
   justify-content: space-between;
 }
 
+// === 角色选择卡片 - Happy Stage 设计 ===
 .character-card {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: calc(33.33% - 16rpx);
   padding: $spacing-sm 0;
+  padding-top: $spacing-md;
+  position: relative;
   transition: all $duration-base $ease-bounce;
 
-  &.selected .character-avatar {
-    background: rgba($song-primary, 0.12);
-    border-color: $song-primary;
-    box-shadow: $shadow-colored-song;
-  }
-
-  &.selected .char-ring {
-    opacity: 1;
-    transform: scale(1);
+  // 选中状态 - 角色开心跳上舞台
+  &.selected {
+    .char-glow {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .character-avatar-wrap {
+      transform: translateY(-8rpx) scale(1.08);
+    }
+    .character-avatar {
+      background: rgba($song-primary, 0.15);
+      border-color: $song-primary;
+      box-shadow: 0 8rpx 24rpx rgba($song-primary, 0.25);
+    }
+    .char-emoji {
+      animation: char-bounce-song 0.5s $ease-bounce;
+    }
+    .char-star {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+    .char-stage {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+    .char-name {
+      color: $song-primary;
+      font-weight: $font-semibold;
+    }
   }
 
   &:active {
@@ -1266,43 +1393,89 @@ onLoad((options) => {
   }
 }
 
-.character-avatar {
-  position: relative;
-  width: 88rpx;
-  height: 88rpx;
+// 背景光晕效果
+.char-glow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  width: 110rpx;
+  height: 110rpx;
+  background: radial-gradient(circle, rgba($song-primary, 0.15) 0%, transparent 70%);
   border-radius: 50%;
-  background: $bg-card;
-  border: 2rpx solid $border-light;
+  opacity: 0;
+  transition: all $duration-base $ease-bounce;
+  pointer-events: none;
+}
+
+// 头像包裹层
+.character-avatar-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: $spacing-xs;
-  transition: all $duration-base;
+  transition: all $duration-base $ease-bounce;
+  z-index: 2;
+}
+
+.character-avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: $bg-card;
+  border: 3rpx solid $border-light;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $duration-base $ease-bounce;
   box-shadow: $shadow-sm;
 }
 
 .char-emoji {
   font-size: 40rpx;
+  transition: transform $duration-base;
+}
+
+// 选中星星徽章 - 弹出动画
+.char-star {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  font-size: 26rpx;
+  opacity: 0;
+  transform: scale(0) rotate(-180deg);
+  transition: all 0.35s $ease-bounce;
+  filter: drop-shadow(0 2rpx 4rpx rgba($accent, 0.4));
+  z-index: 3;
+}
+
+// 彩色舞台底座
+.char-stage {
+  width: 72rpx;
+  height: 8rpx;
+  background: linear-gradient(90deg, transparent, $song-primary, transparent);
+  border-radius: 4rpx;
+  margin-top: -4rpx;
+  margin-bottom: 4rpx;
+  opacity: 0;
+  transform: scaleX(0);
+  transition: all $duration-base $ease-bounce;
 }
 
 .char-name {
   font-size: $font-xs;
   color: $text-primary;
   font-weight: $font-medium;
+  transition: all $duration-base;
 }
 
-.char-ring {
-  position: absolute;
-  top: -6rpx;
-  left: -6rpx;
-  right: -6rpx;
-  bottom: -6rpx;
-  border: 3rpx solid $song-primary;
-  border-radius: 50%;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: all $duration-base $ease-bounce;
-  pointer-events: none;
+// 弹跳动画
+@keyframes char-bounce-song {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-12rpx); }
+  50% { transform: translateY(-4rpx); }
+  75% { transform: translateY(-8rpx); }
 }
 
 // 确认卡片 (温暖花园主题)
@@ -1335,6 +1508,26 @@ onLoad((options) => {
   font-size: $font-base;
   font-weight: $font-medium;
   color: $text-primary;
+
+  &.smart-prompt {
+    font-size: $font-sm;
+    line-height: 1.5;
+    color: $text-secondary;
+    text-align: right;
+    max-width: 400rpx;
+  }
+}
+
+.smart-prompt-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $spacing-xs;
+
+  .confirm-value {
+    text-align: left;
+    max-width: 100%;
+    word-break: break-all;
+  }
 }
 
 .confirm-tip {

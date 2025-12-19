@@ -18,8 +18,16 @@
     </view>
     <view class="nav-placeholder" :style="{ height: navHeight + 'px' }"></view>
 
-    <!-- 主内容 -->
-    <scroll-view class="main-scroll" scroll-y>
+    <!-- 模式选择（首次进入时显示） -->
+    <scroll-view v-if="showModeSelector" class="main-scroll" scroll-y>
+      <CreationModeSelector
+        content-type="picture_book"
+        @select="handleModeSelect"
+      />
+    </scroll-view>
+
+    <!-- 主内容（选择模式后显示） -->
+    <scroll-view v-else class="main-scroll" scroll-y>
       <!-- 步骤指示器 -->
       <view class="steps-indicator">
         <view
@@ -147,11 +155,19 @@
                 :class="{ selected: selectedAnimal === animal.value }"
                 @tap="selectedAnimal = animal.value"
               >
-                <view class="character-avatar">
-                  <text class="char-emoji">{{ animal.emoji }}</text>
+                <!-- 选中时的背景光晕 -->
+                <view class="char-glow"></view>
+                <!-- 角色头像区域 -->
+                <view class="character-avatar-wrap">
+                  <view class="character-avatar">
+                    <text class="char-emoji">{{ animal.emoji }}</text>
+                  </view>
+                  <!-- 选中时的星星徽章 -->
+                  <view v-if="selectedAnimal === animal.value" class="char-star">⭐</view>
                 </view>
+                <!-- 彩色舞台底座 -->
+                <view class="char-stage"></view>
                 <text class="char-name">{{ animal.label }}</text>
-                <view v-if="selectedAnimal === animal.value" class="char-ring"></view>
               </view>
             </view>
           </view>
@@ -172,12 +188,17 @@
                 v-for="voice in voiceOptions"
                 :key="voice.id"
                 class="voice-card"
-                :class="{ selected: selectedVoiceId === voice.id, [voice.gender]: true }"
-                @tap="selectedVoiceId = voice.id"
+                :class="{
+                  selected: selectedVoiceId === voice.id,
+                  playing: playingVoiceId === voice.id,
+                  [voice.gender]: true
+                }"
+                @tap="selectVoice(voice.id)"
               >
                 <view class="voice-avatar">
-                  <text class="voice-emoji">{{ voice.emoji }}</text>
-                  <view class="voice-waves">
+                  <text class="voice-emoji">{{ getVoiceEmoji(voice.id) }}</text>
+                  <!-- 播放时显示声波动画 -->
+                  <view v-if="playingVoiceId === voice.id" class="voice-waves playing">
                     <view class="wave"></view>
                     <view class="wave"></view>
                     <view class="wave"></view>
@@ -185,13 +206,31 @@
                 </view>
                 <view class="voice-content">
                   <view class="voice-name-row">
-                    <text class="voice-name">{{ voice.name }}</text>
+                    <text class="voice-name">{{ voice.name_cn }}</text>
+                    <text class="voice-id">{{ voice.name }}</text>
                     <text v-if="voice.recommended" class="voice-badge">推荐</text>
                     <text class="voice-gender-tag" :class="voice.gender">
                       {{ voice.gender === 'female' ? '女声' : voice.gender === 'male' ? '男声' : '中性' }}
                     </text>
                   </view>
-                  <text class="voice-style">{{ voice.style }}</text>
+                  <view class="voice-detail-row">
+                    <text class="voice-detail-label">🎯</text>
+                    <text class="voice-detail-text">{{ getVoiceDesc(voice.id).scenes }}</text>
+                  </view>
+                  <view class="voice-detail-row">
+                    <text class="voice-detail-label">📚</text>
+                    <text class="voice-detail-text">{{ getVoiceDesc(voice.id).stories }}</text>
+                  </view>
+                </view>
+                <!-- 试听按钮 -->
+                <view
+                  class="voice-preview-btn"
+                  :class="{ loading: loadingVoiceId === voice.id }"
+                  @tap.stop="previewVoice(voice.id)"
+                >
+                  <text v-if="loadingVoiceId === voice.id" class="preview-icon">⏳</text>
+                  <text v-else-if="playingVoiceId === voice.id" class="preview-icon playing">⏹</text>
+                  <text v-else class="preview-icon">▶</text>
                 </view>
                 <view v-if="selectedVoiceId === voice.id" class="voice-check">
                   <text>✓</text>
@@ -243,8 +282,8 @@
       </view>
     </scroll-view>
 
-    <!-- 底部按钮 -->
-    <view class="bottom-bar">
+    <!-- 底部按钮（模式选择器隐藏后显示） -->
+    <view v-if="!showModeSelector" class="bottom-bar">
       <view v-if="currentStep > 0" class="btn-secondary" @tap="prevStep">
         <text>上一步</text>
       </view>
@@ -269,24 +308,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useChildStore } from '@/stores/child'
 import { useContentStore } from '@/stores/content'
 import GeneratingProgress from '@/components/GeneratingProgress/GeneratingProgress.vue'
+import CreationModeSelector from '@/components/CreationModeSelector/CreationModeSelector.vue'
 import {
   generatePictureBookAsync,
   getPictureBookTaskStatus,
   getContentDetail,
+  getTTSVoices,
   type ThemeItem,
   type PictureBook,
   type ArtStyle,
   type ProtagonistAnimal,
-  type VoiceId
+  type VoiceId,
+  type TTSVoiceDetail
 } from '@/api/content'
 
 const childStore = useChildStore()
 const contentStore = useContentStore()
+
+// 模式选择
+const showModeSelector = ref(true)
 
 // 导航栏
 const statusBarHeight = ref(20)
@@ -383,15 +428,149 @@ const protagonistAnimals = [
 ]
 const selectedAnimal = ref<ProtagonistAnimal>('bunny')
 
-// TTS 音色选项
-const voiceOptions: Array<{ id: VoiceId; name: string; gender: 'female' | 'male' | 'neutral'; style: string; emoji: string; recommended?: boolean }> = [
-  { id: 'Cherry', name: '芊悦', gender: 'female', style: '温柔亲切', emoji: '🍒', recommended: true },
-  { id: 'Kore', name: '温暖女声', gender: 'female', style: '温暖亲切', emoji: '🌟' },
-  { id: 'Leda', name: '柔和女声', gender: 'female', style: '柔和舒缓', emoji: '🌙' },
-  { id: 'Puck', name: '活泼中性', gender: 'neutral', style: '活泼有趣', emoji: '🎈' },
-  { id: 'Charon', name: '沉稳男声', gender: 'male', style: '沉稳大气', emoji: '👔' }
-]
-const selectedVoiceId = ref<VoiceId>('Cherry')
+// TTS 音色选项（从 API 加载）
+const voiceOptions = ref<TTSVoiceDetail[]>([])
+
+// 音色图标
+const voiceEmojis: Record<string, string> = {
+  Kore: '🌟',
+  Leda: '🌙',
+  Aoede: '✨',
+  Puck: '🎈',
+  Charon: '📖',
+  Fenrir: '🎭'
+}
+
+// 音色详细描述（适用场景 + 故事类型）
+const voiceDescMap: Record<string, { scenes: string; stories: string }> = {
+  Kore: {
+    scenes: '日常亲子阅读、睡前故事',
+    stories: '温馨成长、友谊冒险、情感启蒙'
+  },
+  Leda: {
+    scenes: '睡前安抚、午休陪伴',
+    stories: '晚安故事、梦境奇遇、自然童话'
+  },
+  Aoede: {
+    scenes: '认知学习、习惯养成',
+    stories: '科普知识、生活常识、安全教育'
+  },
+  Puck: {
+    scenes: '游戏互动、户外活动',
+    stories: '搞笑冒险、动物趣事、魔法世界'
+  },
+  Charon: {
+    scenes: '经典故事、传统文化',
+    stories: '寓言故事、历史传说、名著改编'
+  },
+  Fenrir: {
+    scenes: '角色扮演、戏剧表演',
+    stories: '英雄冒险、奇幻旅程、神话传说'
+  }
+}
+
+const selectedVoiceId = ref<VoiceId>('Kore')  // 默认使用 Kore
+
+// 获取音色详细描述
+function getVoiceDesc(voiceId: string): { scenes: string; stories: string } {
+  return voiceDescMap[voiceId] || { scenes: '通用场景', stories: '各类故事' }
+}
+
+// 音色排序（按指定顺序）
+const VOICE_ORDER = ['Kore', 'Leda', 'Aoede', 'Puck', 'Charon', 'Fenrir']
+
+// 加载音色列表
+async function loadVoiceOptions() {
+  try {
+    const result = await getTTSVoices()
+    if (result.providers?.length > 0) {
+      const voices = result.providers[0].voices
+      // 按指定顺序排序
+      voiceOptions.value = voices.sort((a, b) => {
+        const indexA = VOICE_ORDER.indexOf(a.id)
+        const indexB = VOICE_ORDER.indexOf(b.id)
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB)
+      })
+      // 设置默认音色
+      if (result.default_voice) {
+        selectedVoiceId.value = result.default_voice as VoiceId
+      }
+    }
+  } catch (error) {
+    console.error('[loadVoiceOptions] 加载音色列表失败:', error)
+    // 使用默认值
+    voiceOptions.value = [
+      { id: 'Kore' as VoiceId, name: 'Kore', name_cn: '温暖女声', gender: 'female', style: '温暖亲切', description: '适合儿童故事（推荐）', recommended: true, preview_url: 'https://kids.jackverse.cn/media/voice-preview/gemini/Kore.wav' }
+    ]
+  }
+}
+
+// 获取音色的 emoji
+function getVoiceEmoji(voiceId: string): string {
+  return voiceEmojis[voiceId] || '🎵'
+}
+
+// 音色预览状态
+const playingVoiceId = ref<VoiceId | null>(null)
+const loadingVoiceId = ref<VoiceId | null>(null)
+const previewAudioContext = ref<UniApp.InnerAudioContext | null>(null)
+
+// 选择音色
+function selectVoice(voiceId: VoiceId) {
+  selectedVoiceId.value = voiceId
+}
+
+// 预览音色（使用预生成的音频URL）
+function previewVoice(voiceId: VoiceId) {
+  // 如果正在播放同一个，停止播放
+  if (playingVoiceId.value === voiceId) {
+    stopPreview()
+    return
+  }
+
+  // 停止之前的播放
+  stopPreview()
+
+  // 找到对应音色的预览URL
+  const voice = voiceOptions.value.find(v => v.id === voiceId)
+  if (!voice?.preview_url) {
+    uni.showToast({ title: '预览暂不可用', icon: 'none' })
+    return
+  }
+
+  // 直接播放预生成的音频
+  playPreviewAudio(voice.preview_url, voiceId)
+}
+
+// 播放预览音频
+function playPreviewAudio(url: string, voiceId: VoiceId) {
+  const audioContext = uni.createInnerAudioContext()
+  previewAudioContext.value = audioContext
+
+  audioContext.src = url
+  audioContext.onPlay(() => {
+    playingVoiceId.value = voiceId
+  })
+  audioContext.onEnded(() => {
+    playingVoiceId.value = null
+  })
+  audioContext.onError((err) => {
+    console.error('[playPreviewAudio] 播放错误:', err)
+    playingVoiceId.value = null
+    uni.showToast({ title: '播放失败', icon: 'none' })
+  })
+  audioContext.play()
+}
+
+// 停止预览
+function stopPreview() {
+  if (previewAudioContext.value) {
+    previewAudioContext.value.stop()
+    previewAudioContext.value.destroy()
+    previewAudioContext.value = null
+  }
+  playingVoiceId.value = null
+}
 
 // 生成状态
 const isGenerating = ref(false)
@@ -442,8 +621,8 @@ const currentAnimalName = computed(() => {
 })
 
 const currentVoiceName = computed(() => {
-  const voice = voiceOptions.find(v => v.id === selectedVoiceId.value)
-  return voice ? `${voice.emoji} ${voice.name}` : ''
+  const voice = voiceOptions.value.find(v => v.id === selectedVoiceId.value)
+  return voice ? `${getVoiceEmoji(voice.id)} ${voice.name_cn}` : ''
 })
 
 const canNext = computed(() => {
@@ -533,6 +712,33 @@ const themeIcons: Record<string, string> = {
 
 function getThemeIcon(id: string): string {
   return themeIcons[id] || '📖'
+}
+
+// 模式选择处理
+function handleModeSelect(mode: 'preset' | 'smart', prompt?: string) {
+  showModeSelector.value = false
+
+  if (mode === 'smart') {
+    // 智能创作模式
+    isSmartMode.value = true
+    customPrompt.value = prompt || ''
+
+    // 创建虚拟主题
+    selectedTheme.value = {
+      id: 'smart_custom',
+      name: '智能创作',
+      subcategory: '自定义',
+      age_range: [12, 72],
+      keywords: []
+    }
+
+    // 跳过主题选择，直接进入风格设置
+    currentStep.value = 1
+  } else {
+    // 预设模式，从主题选择开始
+    isSmartMode.value = false
+    currentStep.value = 0
+  }
 }
 
 function selectTheme(theme: ThemeItem) {
@@ -697,11 +903,13 @@ onMounted(() => {
   navHeight.value = statusBarHeight.value + 44
 
   contentStore.fetchThemes()
+  loadVoiceOptions()  // 加载音色列表
 })
 
 onLoad((options) => {
-  // 智能创作模式
+  // 从智能创作页面跳转过来（带完整参数）
   if (options?.creation_mode === 'smart' && options?.custom_prompt) {
+    showModeSelector.value = false  // 隐藏模式选择器
     isSmartMode.value = true
     customPrompt.value = decodeURIComponent(options.custom_prompt)
 
@@ -717,7 +925,6 @@ onLoad((options) => {
     }
 
     // 智能创作模式：跳过主题选择，直接到确认步骤
-    // 创建一个虚拟主题用于显示
     selectedTheme.value = {
       id: 'smart_custom',
       name: '智能创作',
@@ -734,8 +941,10 @@ onLoad((options) => {
     return
   }
 
-  // 普通模式：预选主题
+  // 从首页灵感推荐跳转过来（带主题参数）
   if (options?.theme) {
+    showModeSelector.value = false  // 隐藏模式选择器
+    isSmartMode.value = false
     const themeId = options.theme
 
     // 延迟执行确保组件已初始化
@@ -749,7 +958,17 @@ onLoad((options) => {
         }
       }
     }, 100)
+
+    return
   }
+
+  // 无参数：显示模式选择器（默认行为）
+  showModeSelector.value = true
+})
+
+// 组件卸载时清理音频资源
+onUnmounted(() => {
+  stopPreview()
 })
 </script>
 
@@ -1306,24 +1525,46 @@ onLoad((options) => {
   justify-content: space-between;
 }
 
+// === 角色选择卡片 - Happy Stage 设计 ===
 .character-card {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: calc(33.33% - 16rpx);
   padding: $spacing-sm 0;
+  padding-top: $spacing-md;
+  position: relative;
   transition: all $duration-base $ease-bounce;
 
-  &.selected .character-avatar {
-    background: rgba($book-primary, 0.15);
-    border-color: $book-primary;
-    box-shadow: $shadow-colored-book;
-  }
-
-  &.selected .char-ring {
-    opacity: 1;
-    transform: scale(1);
+  // 选中状态 - 角色开心跳上舞台
+  &.selected {
+    .char-glow {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .character-avatar-wrap {
+      transform: translateY(-8rpx) scale(1.08);
+    }
+    .character-avatar {
+      background: rgba($book-primary, 0.15);
+      border-color: $book-primary;
+      box-shadow: 0 8rpx 24rpx rgba($book-primary, 0.25);
+    }
+    .char-emoji {
+      animation: char-bounce 0.5s $ease-bounce;
+    }
+    .char-star {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+    .char-stage {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+    .char-name {
+      color: $book-primary;
+      font-weight: $font-semibold;
+    }
   }
 
   &:active {
@@ -1331,42 +1572,88 @@ onLoad((options) => {
   }
 }
 
-.character-avatar {
-  position: relative;
-  width: 100rpx;
-  height: 100rpx;
+// 背景光晕效果
+.char-glow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  width: 120rpx;
+  height: 120rpx;
+  background: radial-gradient(circle, rgba($book-primary, 0.15) 0%, transparent 70%);
   border-radius: 50%;
-  background: $bg-soft;
-  border: 2rpx solid $border-light;
+  opacity: 0;
+  transition: all $duration-base $ease-bounce;
+  pointer-events: none;
+}
+
+// 头像包裹层
+.character-avatar-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: $spacing-xs;
-  transition: all $duration-base;
+  transition: all $duration-base $ease-bounce;
+  z-index: 2;
+}
+
+.character-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: $bg-soft;
+  border: 3rpx solid $border-light;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $duration-base $ease-bounce;
 }
 
 .char-emoji {
   font-size: 48rpx;
+  transition: transform $duration-base;
+}
+
+// 选中星星徽章 - 弹出动画
+.char-star {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  font-size: 28rpx;
+  opacity: 0;
+  transform: scale(0) rotate(-180deg);
+  transition: all 0.35s $ease-bounce;
+  filter: drop-shadow(0 2rpx 4rpx rgba($accent, 0.4));
+  z-index: 3;
+}
+
+// 彩色舞台底座
+.char-stage {
+  width: 80rpx;
+  height: 8rpx;
+  background: linear-gradient(90deg, transparent, $book-primary, transparent);
+  border-radius: 4rpx;
+  margin-top: -4rpx;
+  margin-bottom: 4rpx;
+  opacity: 0;
+  transform: scaleX(0);
+  transition: all $duration-base $ease-bounce;
 }
 
 .char-name {
   font-size: $font-xs;
   color: $text-primary;
   font-weight: $font-medium;
+  transition: all $duration-base;
 }
 
-.char-ring {
-  position: absolute;
-  top: -6rpx;
-  left: -6rpx;
-  right: -6rpx;
-  bottom: -6rpx;
-  border: 3rpx solid $book-primary;
-  border-radius: 50%;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: all $duration-base $ease-bounce;
-  pointer-events: none;
+// 弹跳动画
+@keyframes char-bounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-12rpx); }
+  50% { transform: translateY(-4rpx); }
+  75% { transform: translateY(-8rpx); }
 }
 
 // 音色选择
@@ -1448,19 +1735,27 @@ onLoad((options) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
+  gap: 6rpx;
+  min-width: 0;  // 防止 flex 子元素溢出
 }
 
 .voice-name-row {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
+  flex-wrap: wrap;
 }
 
 .voice-name {
   font-size: $font-base;
-  font-weight: $font-medium;
+  font-weight: $font-semibold;
   color: $text-primary;
+}
+
+.voice-id {
+  font-size: $font-xs;
+  color: $text-tertiary;
+  font-weight: $font-normal;
 }
 
 .voice-badge {
@@ -1477,16 +1772,29 @@ onLoad((options) => {
   padding: 2rpx 8rpx;
   border-radius: $radius-xs;
   font-weight: $font-medium;
+  flex-shrink: 0;
 
   &.female { background: $book-light; color: $book-primary; }
   &.male { background: rgba(91, 164, 217, 0.2); color: #5ba4d9; }
   &.neutral { background: rgba(168, 149, 214, 0.2); color: #8875bf; }
-  &.child { background: $video-light; color: $video-primary; }
 }
 
-.voice-style {
+.voice-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6rpx;
+}
+
+.voice-detail-label {
+  font-size: 20rpx;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.voice-detail-text {
   font-size: $font-xs;
-  color: $text-tertiary;
+  color: $text-secondary;
+  line-height: 1.4;
 }
 
 .voice-check {
@@ -1503,6 +1811,72 @@ onLoad((options) => {
     font-size: 20rpx;
     color: $text-white;
   }
+}
+
+// 试听按钮
+.voice-preview-btn {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: rgba($book-primary, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all $duration-fast;
+  margin-right: $spacing-xs;
+
+  &:active {
+    transform: scale(0.9);
+    background: rgba($book-primary, 0.2);
+  }
+
+  &.loading {
+    .preview-icon {
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+.preview-icon {
+  font-size: 24rpx;
+  color: $book-primary;
+
+  &.playing {
+    color: $error;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+// 播放状态的音色卡片
+.voice-card.playing {
+  border-color: $book-primary;
+  background: rgba($book-primary, 0.06);
+
+  .voice-preview-btn {
+    background: $book-primary;
+
+    .preview-icon {
+      color: $text-white;
+    }
+  }
+}
+
+// 播放中的声波动画
+.voice-waves.playing {
+  .wave {
+    opacity: 1;
+    animation: waveAnimPlaying 0.5s ease-in-out infinite;
+  }
+}
+
+@keyframes waveAnimPlaying {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1.2); }
 }
 
 // 确认卡片

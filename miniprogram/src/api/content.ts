@@ -786,3 +786,45 @@ export async function generateStandaloneVideoAsync(params: GenerateStandaloneVid
     timeout: 30000  // 只是提交任务
   })
 }
+
+// ========== TTS 音色列表 ==========
+
+// 音色详情（带预览URL）
+export interface TTSVoiceDetail {
+  id: VoiceId
+  name: string
+  name_cn: string
+  gender: 'female' | 'male' | 'neutral'
+  style: string
+  description: string
+  recommended: boolean
+  preview_url: string
+}
+
+// TTS 服务提供商
+export interface TTSProvider {
+  id: string
+  name: string
+  description: string
+  voices: TTSVoiceDetail[]
+}
+
+// 音色列表响应
+export interface TTSVoicesResponse {
+  providers: TTSProvider[]
+  default_provider: string
+  default_voice: string
+}
+
+/**
+ * 获取 TTS 音色列表
+ * 每个音色自带 preview_url，可直接播放预览
+ */
+export async function getTTSVoices(): Promise<TTSVoicesResponse> {
+  console.log('[getTTSVoices] 获取音色列表')
+  return request.get<TTSVoicesResponse>('/content/tts/voices', {
+    showLoading: false,
+    showError: false,
+    timeout: 10000
+  })
+}

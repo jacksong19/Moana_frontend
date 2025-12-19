@@ -19,8 +19,16 @@
     </view>
     <view class="nav-placeholder" :style="{ height: navHeight + 'px' }"></view>
 
-    <!-- 主内容 -->
-    <scroll-view class="main-scroll" scroll-y>
+    <!-- 模式选择（首次进入时显示） -->
+    <scroll-view v-if="showModeSelector" class="main-scroll" scroll-y>
+      <CreationModeSelector
+        content-type="video"
+        @select="handleModeSelect"
+      />
+    </scroll-view>
+
+    <!-- 主内容（选择模式后显示） -->
+    <scroll-view v-else class="main-scroll" scroll-y>
       <!-- 模式切换 Tab -->
       <view class="mode-tabs">
         <view
@@ -590,8 +598,8 @@
       <view class="bottom-placeholder"></view>
     </scroll-view>
 
-    <!-- 底部按钮 -->
-    <view class="bottom-bar">
+    <!-- 底部按钮（模式选择器隐藏后显示） -->
+    <view v-if="!showModeSelector" class="bottom-bar">
       <!-- 步骤导航按钮 -->
       <view v-if="currentStep > 0" class="step-back-btn" @tap="goToPrevStep">
         <text>上一步</text>
@@ -633,8 +641,12 @@ import {
 } from '@/api/content'
 import { useChildStore } from '@/stores/child'
 import GeneratingProgress from '@/components/GeneratingProgress/GeneratingProgress.vue'
+import CreationModeSelector from '@/components/CreationModeSelector/CreationModeSelector.vue'
 
 const childStore = useChildStore()
+
+// 模式选择
+const showModeSelector = ref(true)
 
 // 基础状态
 const statusBarHeight = ref(20)
@@ -1281,13 +1293,53 @@ function switchCreationMode(mode: 'from_book' | 'standalone') {
   generatedFirstFrame.value = null
 }
 
+// 模式选择处理（来自 CreationModeSelector 组件）
+function handleModeSelect(mode: 'preset' | 'smart', prompt?: string) {
+  showModeSelector.value = false
+
+  if (mode === 'smart') {
+    // 智能创作模式 -> 独立创作
+    creationMode.value = 'standalone'
+    if (prompt) {
+      customPrompt.value = prompt
+    }
+  } else {
+    // 预设模式 -> 基于绘本
+    creationMode.value = 'from_book'
+  }
+
+  currentStep.value = 0
+}
+
 onLoad((options) => {
   const sysInfo = uni.getSystemInfoSync()
   statusBarHeight.value = sysInfo.statusBarHeight || 20
   navHeight.value = statusBarHeight.value + 44
 
-  // 处理从智能创作页面传递的参数
+  // 从智能创作页面跳转过来（带完整参数）
+  if (options?.creation_mode === 'smart' && options?.custom_prompt) {
+    showModeSelector.value = false  // 隐藏模式选择器
+    creationMode.value = 'standalone'
+    customPrompt.value = decodeURIComponent(options.custom_prompt)
+
+    if (options.art_style) {
+      selectedArtStyle.value = options.art_style as ArtStyle
+    }
+    if (options.duration) {
+      selectedDuration.value = parseInt(options.duration) || 5
+    }
+
+    // 直接进入配置步骤
+    setTimeout(() => {
+      currentStep.value = 1
+    }, 100)
+
+    return
+  }
+
+  // 处理旧版参数（兼容）
   if (options?.mode === 'standalone') {
+    showModeSelector.value = false
     creationMode.value = 'standalone'
   }
   if (options?.custom_prompt) {
@@ -1298,6 +1350,11 @@ onLoad((options) => {
   }
   if (options?.duration) {
     selectedDuration.value = parseInt(options.duration) || 5
+  }
+
+  // 如果有任何参数，隐藏模式选择器
+  if (options?.mode || options?.custom_prompt || options?.book_id) {
+    showModeSelector.value = false
   }
 })
 
