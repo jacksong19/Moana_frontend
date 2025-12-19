@@ -107,7 +107,7 @@
                 :key="cat.id"
                 class="style-tab-item"
                 :class="{ active: selectedStyleCategory === cat.id }"
-                @tap="selectedStyleCategory = cat.id"
+                @tap="switchStyleCategory(cat.id)"
               >
                 <text class="style-tab-icon">{{ cat.icon }}</text>
                 <text class="style-tab-name">{{ cat.name }}</text>
@@ -120,7 +120,7 @@
                 :key="style.value"
                 class="art-card"
                 :class="{ selected: selectedArtStyle === style.value, recommended: style.recommended }"
-                @tap="selectedArtStyle = style.value"
+                @tap="selectArtStyle(style.value)"
               >
                 <view class="art-card-bg" :class="style.cssClass || style.value"></view>
                 <view class="art-card-content">
@@ -234,6 +234,222 @@
                 </view>
                 <view v-if="selectedVoiceId === voice.id" class="voice-check">
                   <text>✓</text>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 故事风格 - 折叠面板 -->
+          <view class="enhancement-panel" :class="{ expanded: storyPanelExpanded }">
+            <view class="panel-header" @tap="storyPanelExpanded = !storyPanelExpanded">
+              <view class="panel-header-left">
+                <view class="panel-icon-wrap story">
+                  <text class="panel-icon">📖</text>
+                </view>
+                <view class="panel-header-text">
+                  <text class="panel-title">故事风格</text>
+                  <text class="panel-hint">{{ storyEnhancementSummary }}</text>
+                </view>
+              </view>
+              <view class="panel-arrow" :class="{ expanded: storyPanelExpanded }">
+                <text>›</text>
+              </view>
+            </view>
+            <view class="panel-content" :class="{ expanded: storyPanelExpanded }">
+              <!-- 叙事节奏 -->
+              <view class="enhancement-group">
+                <text class="group-label">叙事节奏</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in narrativePaceOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: storyEnhancement.narrative_pace === opt.value }"
+                    @tap="toggleStoryOption('narrative_pace', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 互动密度 -->
+              <view class="enhancement-group">
+                <text class="group-label">互动密度</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in interactionDensityOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: storyEnhancement.interaction_density === opt.value }"
+                    @tap="toggleStoryOption('interaction_density', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 教育侧重 -->
+              <view class="enhancement-group">
+                <text class="group-label">教育侧重</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in educationalFocusOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: storyEnhancement.educational_focus === opt.value }"
+                    @tap="toggleStoryOption('educational_focus', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 语言风格 -->
+              <view class="enhancement-group">
+                <text class="group-label">语言风格</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in languageStyleOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: storyEnhancement.language_style === opt.value }"
+                    @tap="toggleStoryOption('language_style', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 情节复杂度 -->
+              <view class="enhancement-group">
+                <text class="group-label">情节复杂度</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in plotComplexityOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: storyEnhancement.plot_complexity === opt.value }"
+                    @tap="toggleStoryOption('plot_complexity', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 结局风格 -->
+              <view class="enhancement-group">
+                <text class="group-label">结局风格</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in endingStyleOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: storyEnhancement.ending_style === opt.value }"
+                    @tap="toggleStoryOption('ending_style', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 画面设置 - 折叠面板 -->
+          <view class="enhancement-panel" :class="{ expanded: visualPanelExpanded }">
+            <view class="panel-header" @tap="visualPanelExpanded = !visualPanelExpanded">
+              <view class="panel-header-left">
+                <view class="panel-icon-wrap visual">
+                  <text class="panel-icon">🎬</text>
+                </view>
+                <view class="panel-header-text">
+                  <text class="panel-title">画面设置</text>
+                  <text class="panel-hint">{{ visualEnhancementSummary }}</text>
+                </view>
+              </view>
+              <view class="panel-arrow" :class="{ expanded: visualPanelExpanded }">
+                <text>›</text>
+              </view>
+            </view>
+            <view class="panel-content" :class="{ expanded: visualPanelExpanded }">
+              <!-- 时间氛围 -->
+              <view class="enhancement-group">
+                <text class="group-label">时间氛围</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in timeAtmosphereOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: visualEnhancement.time_atmosphere === opt.value }"
+                    @tap="toggleVisualOption('time_atmosphere', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 场景环境 -->
+              <view class="enhancement-group">
+                <text class="group-label">场景环境</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in sceneEnvironmentOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: visualEnhancement.scene_environment === opt.value }"
+                    @tap="toggleVisualOption('scene_environment', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 情感基调 -->
+              <view class="enhancement-group">
+                <text class="group-label">情感基调</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in emotionalToneOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: visualEnhancement.emotional_tone === opt.value }"
+                    @tap="toggleVisualOption('emotional_tone', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 画面构图 -->
+              <view class="enhancement-group">
+                <text class="group-label">画面构图</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in compositionStyleOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: visualEnhancement.composition_style === opt.value }"
+                    @tap="toggleVisualOption('composition_style', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 光照效果 -->
+              <view class="enhancement-group">
+                <text class="group-label">光照效果</text>
+                <view class="option-cards">
+                  <view
+                    v-for="opt in lightingEffectOptions"
+                    :key="opt.value"
+                    class="option-card"
+                    :class="{ selected: visualEnhancement.lighting_effect === opt.value }"
+                    @tap="toggleVisualOption('lighting_effect', opt.value)"
+                  >
+                    <text class="option-emoji">{{ opt.emoji }}</text>
+                    <text class="option-label">{{ opt.label }}</text>
+                  </view>
                 </view>
               </view>
             </view>
@@ -417,6 +633,30 @@ const currentCategoryStyles = computed(() => {
 
 const selectedArtStyle = ref<ArtStyle>('pixar_3d')
 
+// 切换风格分类（带调试日志）
+function switchStyleCategory(catId: string) {
+  const oldCat = selectedStyleCategory.value
+  selectedStyleCategory.value = catId
+  const catName = styleCategories.find(c => c.id === catId)?.name || catId
+  console.log(`[绘本-风格选择] 分类切换: ${oldCat} → ${catId} (${catName})，当前选中风格: ${selectedArtStyle.value}`)
+}
+
+// 选择艺术风格（带调试日志）
+function selectArtStyle(value: ArtStyle) {
+  const oldValue = selectedArtStyle.value
+  selectedArtStyle.value = value
+  // 查找风格名称
+  let styleName = value
+  for (const styles of Object.values(artStylesByCategory)) {
+    const found = styles.find(s => s.value === value)
+    if (found) {
+      styleName = found.label
+      break
+    }
+  }
+  console.log(`[绘本-风格选择] 艺术风格变更: ${oldValue} → ${value} (${styleName})`)
+}
+
 // 主角动物选项
 const protagonistAnimals = [
   { value: 'bunny' as ProtagonistAnimal, label: '小兔子', emoji: '🐰' },
@@ -427,6 +667,163 @@ const protagonistAnimals = [
   { value: 'fox' as ProtagonistAnimal, label: '小狐狸', emoji: '🦊' }
 ]
 const selectedAnimal = ref<ProtagonistAnimal>('bunny')
+
+// === 故事增强参数 ===
+interface StoryEnhancement {
+  narrative_pace: string | null
+  interaction_density: string | null
+  educational_focus: string | null
+  language_style: string | null
+  plot_complexity: string | null
+  ending_style: string | null
+}
+
+const storyPanelExpanded = ref(false)
+const storyEnhancement = ref<StoryEnhancement>({
+  narrative_pace: null,
+  interaction_density: null,
+  educational_focus: null,
+  language_style: null,
+  plot_complexity: null,
+  ending_style: null
+})
+
+// 叙事节奏选项
+const narrativePaceOptions = [
+  { value: 'relaxed', label: '轻松舒缓', emoji: '😌' },
+  { value: 'lively', label: '紧凑活泼', emoji: '🎵' },
+  { value: 'progressive', label: '循序渐进', emoji: '📖' }
+]
+
+// 互动密度选项
+const interactionDensityOptions = [
+  { value: 'minimal', label: '少互动', emoji: '📕' },
+  { value: 'moderate', label: '适中', emoji: '📗' },
+  { value: 'intensive', label: '多互动', emoji: '📘' }
+]
+
+// 教育侧重选项
+const educationalFocusOptions = [
+  { value: 'cognitive', label: '认知学习', emoji: '🧠' },
+  { value: 'behavioral', label: '行为引导', emoji: '🌟' },
+  { value: 'emotional', label: '情感培养', emoji: '💕' },
+  { value: 'imaginative', label: '想象激发', emoji: '🦋' }
+]
+
+// 语言风格选项
+const languageStyleOptions = [
+  { value: 'simple', label: '简洁直白', emoji: '💬' },
+  { value: 'rhythmic', label: '韵律押韵', emoji: '🎶' },
+  { value: 'onomatopoeia', label: '拟声丰富', emoji: '🔔' },
+  { value: 'repetitive', label: '重复强化', emoji: '🔄' }
+]
+
+// 情节复杂度选项
+const plotComplexityOptions = [
+  { value: 'linear', label: '简单线性', emoji: '➡️' },
+  { value: 'twist', label: '有小波折', emoji: '🌊' },
+  { value: 'ensemble', label: '多角色', emoji: '👥' }
+]
+
+// 结局风格选项
+const endingStyleOptions = [
+  { value: 'warm', label: '温馨收尾', emoji: '🤗' },
+  { value: 'open', label: '开放想象', emoji: '✨' },
+  { value: 'summary', label: '总结回顾', emoji: '📝' }
+]
+
+// 切换故事选项（点击已选中的取消选择）
+function toggleStoryOption(key: keyof StoryEnhancement, value: string) {
+  if (storyEnhancement.value[key] === value) {
+    storyEnhancement.value[key] = null
+  } else {
+    storyEnhancement.value[key] = value
+  }
+}
+
+// 故事增强摘要
+const storyEnhancementSummary = computed(() => {
+  const selected = Object.values(storyEnhancement.value).filter(v => v !== null)
+  if (selected.length === 0) return '可选，由 AI 智能推断'
+  return `已选 ${selected.length} 项`
+})
+
+// === 视觉增强参数 ===
+interface VisualEnhancement {
+  time_atmosphere: string | null
+  scene_environment: string | null
+  emotional_tone: string | null
+  composition_style: string | null
+  lighting_effect: string | null
+}
+
+const visualPanelExpanded = ref(false)
+const visualEnhancement = ref<VisualEnhancement>({
+  time_atmosphere: null,
+  scene_environment: null,
+  emotional_tone: null,
+  composition_style: null,
+  lighting_effect: null
+})
+
+// 时间氛围选项
+const timeAtmosphereOptions = [
+  { value: 'morning', label: '清晨阳光', emoji: '🌅' },
+  { value: 'afternoon', label: '午后温暖', emoji: '☀️' },
+  { value: 'sunset', label: '傍晚金色', emoji: '🌇' },
+  { value: 'night', label: '夜晚星空', emoji: '🌙' },
+  { value: 'dreamy', label: '梦幻魔法', emoji: '✨' }
+]
+
+// 场景环境选项
+const sceneEnvironmentOptions = [
+  { value: 'indoor', label: '温馨室内', emoji: '🏠' },
+  { value: 'garden', label: '花园户外', emoji: '🌷' },
+  { value: 'forest', label: '森林探险', emoji: '🌲' },
+  { value: 'beach', label: '海边沙滩', emoji: '🏖️' },
+  { value: 'clouds', label: '云端梦境', emoji: '☁️' }
+]
+
+// 情感基调选项
+const emotionalToneOptions = [
+  { value: 'cheerful', label: '欢乐活泼', emoji: '😄' },
+  { value: 'cozy', label: '温馨甜蜜', emoji: '🥰' },
+  { value: 'playful', label: '轻松幽默', emoji: '😜' },
+  { value: 'peaceful', label: '安静祥和', emoji: '😊' },
+  { value: 'curious', label: '神秘好奇', emoji: '🤔' }
+]
+
+// 画面构图选项
+const compositionStyleOptions = [
+  { value: 'close_up', label: '角色特写', emoji: '👤' },
+  { value: 'panorama', label: '全景场景', emoji: '🏞️' },
+  { value: 'interaction', label: '互动场景', emoji: '🤝' },
+  { value: 'narrative', label: '故事叙事', emoji: '📽️' }
+]
+
+// 光照效果选项
+const lightingEffectOptions = [
+  { value: 'soft_natural', label: '柔和自然', emoji: '🌤️' },
+  { value: 'warm_sunlight', label: '温暖阳光', emoji: '🌞' },
+  { value: 'dreamy_glow', label: '梦幻光晕', emoji: '💫' },
+  { value: 'cozy_lamp', label: '夜灯温馨', emoji: '🪔' }
+]
+
+// 切换视觉选项（点击已选中的取消选择）
+function toggleVisualOption(key: keyof VisualEnhancement, value: string) {
+  if (visualEnhancement.value[key] === value) {
+    visualEnhancement.value[key] = null
+  } else {
+    visualEnhancement.value[key] = value
+  }
+}
+
+// 视觉增强摘要
+const visualEnhancementSummary = computed(() => {
+  const selected = Object.values(visualEnhancement.value).filter(v => v !== null)
+  if (selected.length === 0) return '可选，由 AI 智能推断'
+  return `已选 ${selected.length} 项`
+})
 
 // TTS 音色选项（从 API 加载）
 const voiceOptions = ref<TTSVoiceDetail[]>([])
@@ -754,9 +1151,18 @@ function prevStep() {
 async function handleNext() {
   if (!canNext.value) return
 
+  // 记录当前步骤和选择状态
+  console.log(`[绘本-步骤] 点击下一步，当前步骤: ${currentStep.value}`)
+  if (currentStep.value === 1) {
+    // 从风格设置步骤离开时，记录所有选择
+    console.log(`[绘本-步骤] 风格设置完成，art_style=${selectedArtStyle.value}, protagonist=${selectedAnimal.value}, voice=${selectedVoiceId.value}`)
+  }
+
   if (currentStep.value < 2) {
     currentStep.value++
+    console.log(`[绘本-步骤] 进入步骤 ${currentStep.value}`)
   } else {
+    console.log(`[绘本-步骤] 开始创作，最终 art_style=${selectedArtStyle.value}`)
     await startGenerate()
   }
 }
@@ -792,7 +1198,26 @@ async function startGenerate() {
       console.log('[绘本] 智能创作模式，描述:', customPrompt.value)
     }
 
-    console.log('[绘本] 发起异步生成请求，风格:', selectedArtStyle.value, '主角:', selectedAnimal.value, '音色:', selectedVoiceId.value)
+    // 故事增强参数：过滤掉 null 值
+    const storyEnhancementParams = Object.fromEntries(
+      Object.entries(storyEnhancement.value).filter(([_, v]) => v !== null)
+    )
+    if (Object.keys(storyEnhancementParams).length > 0) {
+      (requestParams as any).story_enhancement = storyEnhancementParams
+      console.log('[绘本] 故事增强参数:', storyEnhancementParams)
+    }
+
+    // 视觉增强参数：过滤掉 null 值
+    const visualEnhancementParams = Object.fromEntries(
+      Object.entries(visualEnhancement.value).filter(([_, v]) => v !== null)
+    )
+    if (Object.keys(visualEnhancementParams).length > 0) {
+      (requestParams as any).visual_enhancement = visualEnhancementParams
+      console.log('[绘本] 视觉增强参数:', visualEnhancementParams)
+    }
+
+    console.log('[绘本] 发起异步生成请求，完整参数:', JSON.stringify(requestParams, null, 2))
+    console.log('[绘本] art_style 参数:', requestParams.art_style, '(selectedArtStyle.value =', selectedArtStyle.value, ')')
     const asyncResult = await generatePictureBookAsync(requestParams)
 
     const taskId = asyncResult.task_id
@@ -2010,5 +2435,172 @@ onUnmounted(() => {
     background: $border-medium;
     box-shadow: none;
   }
+}
+
+// === 增强参数折叠面板 ===
+.enhancement-panel {
+  background: $bg-card;
+  border-radius: $radius-lg;
+  margin-top: $spacing-md;
+  overflow: hidden;
+  box-shadow: $shadow-sm;
+  border: 1rpx solid $border-light;
+  transition: all $duration-base $ease-out;
+
+  &.expanded {
+    box-shadow: $shadow-card;
+    border-color: rgba($book-primary, 0.2);
+  }
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  cursor: pointer;
+  transition: background $duration-fast;
+
+  &:active {
+    background: $bg-soft;
+  }
+}
+
+.panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.panel-icon-wrap {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.story {
+    background: linear-gradient(135deg, rgba($book-primary, 0.15) 0%, rgba($book-primary, 0.08) 100%);
+  }
+
+  &.visual {
+    background: linear-gradient(135deg, rgba($video-primary, 0.15) 0%, rgba($video-primary, 0.08) 100%);
+  }
+}
+
+.panel-icon {
+  font-size: 24rpx;
+}
+
+.panel-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.panel-title {
+  font-size: $font-base;
+  font-weight: $font-semibold;
+  color: $text-primary;
+}
+
+.panel-hint {
+  font-size: $font-xs;
+  color: $text-tertiary;
+}
+
+.panel-arrow {
+  width: 36rpx;
+  height: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform $duration-base $ease-out;
+
+  text {
+    font-size: 32rpx;
+    color: $text-tertiary;
+    font-weight: $font-medium;
+  }
+
+  &.expanded {
+    transform: rotate(90deg);
+  }
+}
+
+.panel-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height $duration-slow $ease-out;
+  padding: 0 $spacing-md;
+
+  &.expanded {
+    max-height: 2000rpx;
+    padding-bottom: $spacing-md;
+  }
+}
+
+.enhancement-group {
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.group-label {
+  display: block;
+  font-size: $font-sm;
+  font-weight: $font-medium;
+  color: $text-secondary;
+  margin-bottom: $spacing-xs;
+  padding-left: 4rpx;
+}
+
+.option-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  background: $bg-soft;
+  border-radius: $radius-md;
+  border: 2rpx solid transparent;
+  transition: all $duration-fast $ease-bounce;
+  min-width: 140rpx;
+
+  &.selected {
+    background: rgba($book-primary, 0.1);
+    border-color: $book-primary;
+    transform: scale(1.02);
+
+    .option-label {
+      color: $book-primary;
+      font-weight: $font-semibold;
+    }
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.option-emoji {
+  font-size: 32rpx;
+  margin-bottom: 4rpx;
+}
+
+.option-label {
+  font-size: $font-xs;
+  color: $text-primary;
+  white-space: nowrap;
+  transition: all $duration-fast;
 }
 </style>
