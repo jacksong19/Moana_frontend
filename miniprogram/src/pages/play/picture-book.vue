@@ -35,14 +35,33 @@
             </view>
           </view>
 
-          <!-- 故事文字卡片 - 底部优雅展示 -->
+          <!-- 故事文字卡片 - 童话书页风格 -->
           <view
             class="story-card"
             :class="{ visible: currentPage === index && cardVisible }"
           >
-            <view class="card-glow"></view>
+            <!-- 书页装饰 -->
+            <view class="page-decor">
+              <view class="decor-corner corner-tl"></view>
+              <view class="decor-corner corner-tr"></view>
+              <view class="decor-corner corner-bl"></view>
+              <view class="decor-corner corner-br"></view>
+            </view>
+            <!-- 书签标记 -->
+            <view class="page-bookmark">
+              <text class="bookmark-icon">📖</text>
+            </view>
+            <!-- 纸张质感层 -->
+            <view class="page-texture"></view>
+            <!-- 文字内容 -->
             <view class="card-content">
-              <text class="story-text">{{ page.text }}</text>
+              <view class="text-wrapper">
+                <text class="story-text">{{ page.text }}</text>
+              </view>
+              <!-- 页码装饰 -->
+              <view class="page-number">
+                <text>{{ index + 1 }} / {{ content?.pages?.length || 0 }}</text>
+              </view>
             </view>
             <!-- 互动提示 -->
             <view
@@ -819,79 +838,214 @@ $font-story: -apple-system, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
   to { left: 100%; }
 }
 
-// 故事文字卡片
+// 故事文字卡片 - 童话书页风格
 .story-card {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 60rpx 40rpx;
-  padding-bottom: calc(60rpx + env(safe-area-inset-bottom));
+  bottom: 32rpx;
+  left: 24rpx;
+  right: 24rpx;
+  margin-bottom: env(safe-area-inset-bottom);
   background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.6) 60%,
-    transparent 100%
+    165deg,
+    #FDF8F3 0%,
+    #F9F3EC 30%,
+    #FBF6F0 70%,
+    #F5EEE6 100%
   );
-  transform: translateY(40rpx);
+  border-radius: 24rpx;
+  padding: 40rpx 36rpx 32rpx;
+  transform: translateY(60rpx) scale(0.95);
   opacity: 0;
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:
+    0 8rpx 32rpx rgba(0, 0, 0, 0.25),
+    0 2rpx 8rpx rgba(0, 0, 0, 0.15),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
 
   &.visible {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
+    animation: gentle-float 4s ease-in-out infinite 0.6s;
   }
 }
 
-.card-glow {
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4rpx) scale(1); }
+}
+
+// 书页装饰角
+.page-decor {
   position: absolute;
-  top: -2rpx;
-  left: 40rpx;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.decor-corner {
+  position: absolute;
+  width: 48rpx;
+  height: 48rpx;
+  opacity: 0.4;
+
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    background: linear-gradient(135deg, #C9A86C 0%, #E8D5B7 100%);
+  }
+
+  &.corner-tl {
+    top: 12rpx;
+    left: 12rpx;
+    &::before { top: 0; left: 0; width: 20rpx; height: 3rpx; border-radius: 2rpx; }
+    &::after { top: 0; left: 0; width: 3rpx; height: 20rpx; border-radius: 2rpx; }
+  }
+
+  &.corner-tr {
+    top: 12rpx;
+    right: 12rpx;
+    &::before { top: 0; right: 0; width: 20rpx; height: 3rpx; border-radius: 2rpx; }
+    &::after { top: 0; right: 0; width: 3rpx; height: 20rpx; border-radius: 2rpx; }
+  }
+
+  &.corner-bl {
+    bottom: 12rpx;
+    left: 12rpx;
+    &::before { bottom: 0; left: 0; width: 20rpx; height: 3rpx; border-radius: 2rpx; }
+    &::after { bottom: 0; left: 0; width: 3rpx; height: 20rpx; border-radius: 2rpx; }
+  }
+
+  &.corner-br {
+    bottom: 12rpx;
+    right: 12rpx;
+    &::before { bottom: 0; right: 0; width: 20rpx; height: 3rpx; border-radius: 2rpx; }
+    &::after { bottom: 0; right: 0; width: 3rpx; height: 20rpx; border-radius: 2rpx; }
+  }
+}
+
+// 书签装饰
+.page-bookmark {
+  position: absolute;
+  top: -8rpx;
   right: 40rpx;
-  height: 2rpx;
-  background: linear-gradient(90deg, transparent, $story-gold, transparent);
-  opacity: 0.6;
+  width: 44rpx;
+  height: 56rpx;
+  background: linear-gradient(180deg, #E85D4A 0%, #D64A3A 100%);
+  border-radius: 0 0 8rpx 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(232, 93, 74, 0.3);
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 22rpx solid transparent;
+    border-right: 22rpx solid transparent;
+    border-bottom: 12rpx solid #FDF8F3;
+  }
+
+  .bookmark-icon {
+    font-size: 20rpx;
+    position: relative;
+    top: -4rpx;
+  }
+}
+
+// 纸张纹理
+.page-texture {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(ellipse at 20% 80%, rgba(200, 180, 140, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(180, 160, 120, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(220, 200, 160, 0.04) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.text-wrapper {
   position: relative;
 }
 
 .story-text {
   display: block;
-  font-family: $font-story;
-  font-size: 36rpx;
-  line-height: 1.9;
-  color: $story-cream;
-  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.5);
-  letter-spacing: 2rpx;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 34rpx;
+  line-height: 2;
+  color: #3D3425;
+  letter-spacing: 1.5rpx;
+  text-align: center;
+  text-shadow: 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 
-// 互动提示
+// 页码装饰
+.page-number {
+  display: flex;
+  justify-content: center;
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid rgba(201, 168, 108, 0.2);
+
+  text {
+    font-size: 22rpx;
+    color: #B8A88A;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    letter-spacing: 4rpx;
+  }
+}
+
+// 互动提示 - 童话书页配色
 .interaction-hint {
   display: inline-flex;
   align-items: center;
   gap: 12rpx;
   margin-top: 24rpx;
-  padding: 16rpx 28rpx;
-  background: linear-gradient(135deg, $story-gold, #FF9500);
+  padding: 18rpx 32rpx;
+  background: linear-gradient(135deg, #C9A86C 0%, #D4B87A 100%);
   border-radius: 100rpx;
-  animation: pulse-glow 2s ease-in-out infinite;
+  border: 2rpx solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 4rpx 16rpx rgba(201, 168, 108, 0.4),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.4);
+  animation: hint-pulse 2s ease-in-out infinite;
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20rpx rgba($story-gold, 0.4); }
-  50% { box-shadow: 0 0 40rpx rgba($story-gold, 0.8); }
+@keyframes hint-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4rpx 16rpx rgba(201, 168, 108, 0.4), inset 0 1rpx 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 6rpx 24rpx rgba(201, 168, 108, 0.6), inset 0 1rpx 0 rgba(255, 255, 255, 0.4);
+  }
 }
 
 .hint-icon {
-  font-size: 32rpx;
+  font-size: 28rpx;
 }
 
 .hint-text {
-  font-size: 28rpx;
-  color: $story-night;
+  font-size: 26rpx;
+  color: #3D3425;
   font-weight: 600;
+  letter-spacing: 1rpx;
 }
 
 // 极简顶部

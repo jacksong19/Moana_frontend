@@ -56,28 +56,39 @@
           v-for="item in contentList"
           :key="item.id"
           class="content-card"
-          :class="'card-' + (item.content_type || 'picture_book')"
+          :class="'card-' + inferContentType(item)"
           @tap="goToDetail(item)"
           @longpress="showActionSheet(item)"
         >
           <view class="card-cover">
+            <!-- 加载占位符：只在有图片/视频需要加载时显示 -->
+            <view v-if="needsLoading(item) && !imageLoaded[item.id]" class="cover-loading">
+              <view class="loading-shimmer"></view>
+            </view>
             <!-- 绘本类型：图片轮播预览 -->
             <swiper
-              v-if="(item as any).content_type === 'picture_book' && item.pages && item.pages.length > 1"
+              v-if="inferContentType(item) === 'picture_book' && item.pages && item.pages.length > 1"
               class="cover-swiper"
               :autoplay="true"
-              :interval="2000"
+              :interval="3000"
               :duration="500"
               :circular="true"
               :indicator-dots="false"
             >
               <swiper-item v-for="(page, pageIndex) in item.pages" :key="pageIndex">
-                <image :src="page.image_url" mode="aspectFill" class="swiper-img" />
+                <image
+                  :src="page.image_url"
+                  mode="aspectFill"
+                  class="swiper-img"
+                  lazy-load
+                  @load="onImageLoad(item.id)"
+                  @error="onImageError(item.id)"
+                />
               </swiper-item>
             </swiper>
             <!-- 视频类型：无声自动播放预览 -->
             <video
-              v-else-if="(item as any).content_type === 'video' && (item as any).video_url"
+              v-else-if="inferContentType(item) === 'video' && (item as any).video_url"
               :src="(item as any).video_url"
               :autoplay="true"
               :loop="true"
@@ -98,13 +109,16 @@
               :src="item.cover_url"
               mode="aspectFill"
               class="cover-img"
+              lazy-load
+              @load="onImageLoad(item.id)"
+              @error="onImageError(item.id)"
             />
             <!-- 无封面：显示占位符 -->
             <view v-else class="cover-placeholder">
-              <text>{{ getTypeIcon((item as any).content_type) }}</text>
+              <text>{{ getTypeIcon(inferContentType(item)) }}</text>
             </view>
             <view class="card-type-badge">
-              <text>{{ getTypeLabel((item as any).content_type) }}</text>
+              <text>{{ getTypeLabel(inferContentType(item)) }}</text>
             </view>
             <view class="play-btn" @tap.stop="goToPlay(item)">
               <text>▶</text>
@@ -157,14 +171,53 @@ const currentFilter = ref('all')
 const loading = ref(false)
 const hasMore = ref(true)
 
+// 图片加载状态
+const imageLoaded = ref<Record<string, boolean>>({})
+
+function onImageLoad(id: string) {
+  imageLoaded.value[id] = true
+}
+
+function onImageError(id: string) {
+  // 加载失败也标记为已加载，隐藏 shimmer
+  imageLoaded.value[id] = true
+}
+
+// 判断内容项是否需要显示加载占位符
+function needsLoading(item: any): boolean {
+  const contentType = inferContentType(item)
+  // 视频不需要 shimmer，直接自动播放
+  if (contentType === 'video') {
+    return false
+  }
+  // 绘本有 pages 需要加载图片
+  if (contentType === 'picture_book' && item.pages && item.pages.length > 0) {
+    return true
+  }
+  // 儿歌或其他类型有封面图需要加载
+  if (contentType === 'nursery_rhyme' && item.cover_url) {
+    return true
+  }
+  // 其他情况不需要 shimmer（包括无封面的占位符）
+  return false
+}
+
 const contentList = computed(() => {
   if (currentFilter.value === 'all') {
     return contentStore.generatedList
   }
   return contentStore.generatedList.filter(
-    item => (item as any).content_type === currentFilter.value
+    item => inferContentType(item) === currentFilter.value
   )
 })
+
+// 推断内容类型（兼容后端未返回 content_type 的情况）
+function inferContentType(item: any): string {
+  if (item.content_type) return item.content_type
+  if (item.video_url) return 'video'
+  if (item.audio_url && !item.pages) return 'nursery_rhyme'
+  return 'picture_book'
+}
 
 function getTypeIcon(type: string) {
   const icons: Record<string, string> = {
@@ -201,11 +254,16 @@ async function loadData(refresh = false) {
 
   loading.value = true
   try {
+    // 刷新时重置图片加载状态
+    if (refresh) {
+      imageLoaded.value = {}
+    }
+
     await contentStore.fetchGeneratedList(refresh)
     hasMore.value = contentStore.generatedList.length >= 20
 
-    // 获取绘本详情用于轮播预览（视频已由列表接口返回 video_url）
-    await fetchPictureBookDetails()
+    // 获取绘本详情用于轮播预览
+    await fetchContentDetails()
   } catch (e) {
     console.error('加载失败:', e)
   } finally {
@@ -213,17 +271,17 @@ async function loadData(refresh = false) {
   }
 }
 
-// 获取绘本详情（列表接口不返回 pages，用于轮播预览）
-async function fetchPictureBookDetails() {
-  // 只获取绘本的详情（视频已由列表接口返回 video_url）
-  const pictureBooks = contentStore.generatedList.filter((item: any) =>
-    item.content_type === 'picture_book' && (!item.pages || item.pages.length === 0)
-  )
+// 获取绘本详情用于轮播预览（视频已由列表接口返回 video_url）
+async function fetchContentDetails() {
+  // 只获取绘本的详情（需要 pages 用于轮播）
+  const needsDetail = contentStore.generatedList.filter((item: any) => {
+    return item.content_type === 'picture_book' && (!item.pages || item.pages.length === 0)
+  })
 
-  if (pictureBooks.length === 0) return
+  if (needsDetail.length === 0) return
 
   // 并行获取所有绘本详情
-  const detailPromises = pictureBooks.map(async (book) => {
+  const detailPromises = needsDetail.map(async (book: any) => {
     try {
       const detail = await getContentDetail(book.id)
       const index = contentStore.generatedList.findIndex(item => item.id === book.id)
@@ -248,7 +306,7 @@ function goToCreate() {
 }
 
 function goToDetail(item: PictureBook) {
-  const contentType = (item as any).content_type
+  const contentType = inferContentType(item)
   if (contentType === 'nursery_rhyme') {
     uni.navigateTo({ url: `/pages/play/nursery-rhyme?id=${item.id}` })
   } else if (contentType === 'video') {
@@ -259,7 +317,7 @@ function goToDetail(item: PictureBook) {
 }
 
 function goToPlay(item: PictureBook) {
-  const contentType = (item as any).content_type
+  const contentType = inferContentType(item)
   if (contentType === 'nursery_rhyme') {
     uni.navigateTo({ url: `/pages/play/nursery-rhyme?id=${item.id}&autoplay=1` })
   } else if (contentType === 'video') {
@@ -535,6 +593,43 @@ onShow(() => {
 
   text {
     font-size: 56rpx;
+  }
+}
+
+// 加载占位符
+.cover-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  background: $bg-soft;
+  overflow: hidden;
+}
+
+.loading-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    $bg-soft 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    $bg-soft 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 
