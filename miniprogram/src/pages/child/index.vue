@@ -83,15 +83,18 @@
       </view>
     </view>
 
-    <!-- 退出按钮 (长按) -->
+    <!-- 退出按钮 (长按3秒) -->
     <view
       class="exit-area"
-      @longpress="showExitConfirm"
-      @touchstart="startExitTimer"
+      @touchstart.prevent="startExitTimer"
       @touchend="cancelExitTimer"
+      @touchcancel="cancelExitTimer"
     >
-      <view class="exit-hint">
-        <text v-if="exitProgress > 0">{{ exitProgress }}%</text>
+      <view class="exit-hint" :class="{ 'exit-active': exitProgress > 0 }">
+        <view v-if="exitProgress > 0" class="exit-progress-bar">
+          <view class="exit-progress-fill" :style="{ width: exitProgress + '%' }"></view>
+        </view>
+        <text v-if="exitProgress > 0">{{ Math.ceil(3 - exitProgress * 0.03) }}秒</text>
         <text v-else>长按 3 秒退出</text>
       </view>
     </view>
@@ -753,18 +756,52 @@ onUnmounted(() => {
   padding: $spacing-lg;
   padding-bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom));
   text-align: center;
+  // 防止默认的长按菜单
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .exit-hint {
-  display: inline-block;
-  padding: $spacing-xs $spacing-md;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-lg;
   background: rgba(0, 0, 0, 0.1);
   border-radius: $radius-full;
+  min-width: 200rpx;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  &.exit-active {
+    background: rgba(255, 107, 107, 0.2);
+    transform: scale(1.05);
+  }
 
   text {
     font-size: $font-sm;
     color: $text-secondary;
+    position: relative;
+    z-index: 1;
   }
+}
+
+.exit-progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  background: transparent;
+}
+
+.exit-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255, 107, 107, 0.3), rgba(255, 107, 107, 0.5));
+  border-radius: $radius-full;
+  transition: width 0.1s linear;
 }
 
 // 退出确认弹窗
