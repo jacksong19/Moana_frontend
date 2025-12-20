@@ -88,76 +88,96 @@
       <view v-if="currentStep === 1" class="step-content animate-fadeIn">
         <view class="style-header">
           <text class="step-title">风格设置</text>
-          <text class="step-desc">选择 {{ childName }} 喜欢的音乐风格和封面主角</text>
+          <text class="step-desc">为 {{ childName }} 选择音乐氛围和人声类型</text>
+        </view>
+
+        <!-- 场景预设快捷入口 -->
+        <view v-if="showScenePresets" class="scene-presets-section">
+          <view class="section-header">
+            <view class="section-icon-wrap preset">
+              <text class="section-icon">✨</text>
+            </view>
+            <text class="section-title">场景预设</text>
+            <text class="section-hint">一键设置推荐参数</text>
+          </view>
+          <scroll-view class="presets-scroll" scroll-x enhanced :show-scrollbar="false">
+            <view class="presets-track">
+              <view
+                v-for="preset in scenePresets"
+                :key="preset.id"
+                class="preset-card"
+                :class="{ selected: selectedScenePreset === preset.id }"
+                @tap="selectScenePreset(preset)"
+              >
+                <text class="preset-icon">{{ preset.icon }}</text>
+                <text class="preset-name">{{ preset.name }}</text>
+              </view>
+            </view>
+          </scroll-view>
         </view>
 
         <view class="style-sections">
-          <!-- 音乐情绪 - 大卡片展示 -->
+          <!-- 音乐氛围 - 扩展到 8 种 -->
           <view class="style-section music-section">
             <view class="section-header">
               <view class="section-icon-wrap music">
                 <text class="section-icon">🎵</text>
               </view>
-              <text class="section-title">音乐情绪</text>
+              <text class="section-title">音乐氛围</text>
             </view>
             <view class="music-mood-grid">
               <view
-                v-for="style in musicStyles"
-                :key="style.value"
+                v-for="mood in musicMoods"
+                :key="mood.value"
                 class="music-mood-card"
-                :class="{ selected: selectedStyle === style.value }"
-                @tap="selectedStyle = style.value"
+                :class="{ selected: selectedMood === mood.value }"
+                @tap="onMoodChange(mood.value)"
               >
-                <view class="mood-visual" :class="style.value">
-                  <text class="mood-icon">{{ style.icon }}</text>
+                <view class="mood-visual" :class="mood.value">
+                  <text class="mood-icon">{{ mood.icon }}</text>
                   <view class="mood-bars">
                     <view class="bar" v-for="i in 5" :key="i"></view>
                   </view>
                 </view>
                 <view class="mood-info">
-                  <text class="mood-name">{{ style.name }}</text>
-                  <text class="mood-desc">{{ style.desc }}</text>
+                  <text class="mood-name">{{ mood.label }}</text>
+                  <text class="mood-desc">{{ mood.description }}</text>
                 </view>
-                <view v-if="selectedStyle === style.value" class="mood-check">
+                <view v-if="selectedMood === mood.value" class="mood-check">
                   <text>✓</text>
                 </view>
               </view>
             </view>
           </view>
 
-          <!-- 封面主角 - 圆形头像 -->
-          <view class="style-section character-section">
+          <!-- 人声类型 - 6 种 -->
+          <view class="style-section vocal-section">
             <view class="section-header">
-              <view class="section-icon-wrap bunny">
-                <text class="section-icon">🐰</text>
+              <view class="section-icon-wrap vocal">
+                <text class="section-icon">🎤</text>
               </view>
-              <text class="section-title">封面主角</text>
+              <text class="section-title">人声类型</text>
             </view>
-            <view class="character-carousel">
+            <view class="vocal-type-grid">
               <view
-                v-for="animal in protagonistAnimals"
-                :key="animal.value"
-                class="character-card"
-                :class="{ selected: selectedAnimal === animal.value }"
-                @tap="selectedAnimal = animal.value"
+                v-for="vocal in vocalTypes"
+                :key="vocal.value"
+                class="vocal-type-card"
+                :class="{ selected: selectedVocalType === vocal.value }"
+                @tap="selectedVocalType = vocal.value"
               >
-                <!-- 选中时的背景光晕 -->
-                <view class="char-glow"></view>
-                <!-- 角色头像区域 -->
-                <view class="character-avatar-wrap">
-                  <view class="character-avatar">
-                    <text class="char-emoji">{{ animal.emoji }}</text>
-                  </view>
-                  <!-- 选中时的星星徽章 -->
-                  <view v-if="selectedAnimal === animal.value" class="char-star">⭐</view>
+                <text class="vocal-icon">{{ vocal.icon }}</text>
+                <view class="vocal-info">
+                  <text class="vocal-name">{{ vocal.label }}</text>
+                  <text class="vocal-desc">{{ vocal.description }}</text>
                 </view>
-                <!-- 彩色舞台底座 -->
-                <view class="char-stage"></view>
-                <text class="char-name">{{ animal.label }}</text>
+                <view v-if="selectedVocalType === vocal.value" class="vocal-check">✓</view>
               </view>
             </view>
           </view>
 
+          <!-- 高级设置组件 -->
+          <NurseryRhymeAdvanced v-model="advancedParams" />
         </view>
       </view>
 
@@ -186,8 +206,8 @@
             <text class="confirm-value">{{ currentStyleName }}</text>
           </view>
           <view class="confirm-item">
-            <text class="confirm-label">封面主角</text>
-            <text class="confirm-value">{{ currentAnimalName }}</text>
+            <text class="confirm-label">人声类型</text>
+            <text class="confirm-value">{{ currentVocalTypeName }}</text>
           </view>
         </view>
 
@@ -224,12 +244,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useChildStore } from '@/stores/child'
 import { useContentStore } from '@/stores/content'
 import GeneratingProgress from '@/components/GeneratingProgress/GeneratingProgress.vue'
 import CreationModeSelector from '@/components/CreationModeSelector/CreationModeSelector.vue'
+import NurseryRhymeAdvanced from '@/components/NurseryRhymeAdvanced/NurseryRhymeAdvanced.vue'
 import { generateNurseryRhymeAsync, getNurseryRhymeTaskStatus, getContentDetail } from '@/api/content'
 import type {
   ThemeItem,
@@ -237,8 +258,18 @@ import type {
   NurseryRhyme,
   SunoTaskStage,
   NurseryRhymeTaskStatus,
-  ProtagonistAnimal
+  ProtagonistAnimal,
+  GenerateNurseryRhymeParams
 } from '@/api/content'
+import {
+  SCENE_PRESETS,
+  MUSIC_MOODS,
+  VOCAL_TYPES,
+  getScenePresetParams,
+  getMoodLinkageParams,
+  DEFAULT_PARAMS
+} from '@/config/nurseryRhymeConfig'
+import type { ScenePreset, NurseryRhymeFullParams } from '@/config/nurseryRhymeConfig'
 
 const childStore = useChildStore()
 const contentStore = useContentStore()
@@ -272,26 +303,35 @@ const themeCategories = [
 const selectedCategory = ref('habit')
 const selectedTheme = ref<ThemeItem | null>(null)
 
-// 音乐风格
-const musicStyles: { value: MusicStyle; name: string; icon: string; desc: string }[] = [
-  { value: 'cheerful', name: '欢快活泼', icon: '🎉', desc: '节奏明快，充满活力' },
-  { value: 'gentle', name: '温柔舒缓', icon: '🌸', desc: '轻柔优美，温馨甜蜜' },
-  { value: 'playful', name: '俏皮可爱', icon: '🎈', desc: '趣味十足，朗朗上口' },
-  { value: 'lullaby', name: '摇篮曲风', icon: '🌙', desc: '安静柔和，适合入睡' },
-  { value: 'educational', name: '启蒙教育', icon: '📚', desc: '寓教于乐，知识丰富' }
-]
-const selectedStyle = ref<MusicStyle>('cheerful')
+// 场景预设
+const scenePresets = SCENE_PRESETS
+const selectedScenePreset = ref<string | null>(null)
+const showScenePresets = ref(true)
 
-// 主角动物选项
-const protagonistAnimals = [
-  { value: 'bunny' as ProtagonistAnimal, label: '小兔子', emoji: '🐰' },
-  { value: 'bear' as ProtagonistAnimal, label: '小熊', emoji: '🐻' },
-  { value: 'cat' as ProtagonistAnimal, label: '小猫咪', emoji: '🐱' },
-  { value: 'dog' as ProtagonistAnimal, label: '小狗狗', emoji: '🐶' },
-  { value: 'panda' as ProtagonistAnimal, label: '熊猫', emoji: '🐼' },
-  { value: 'fox' as ProtagonistAnimal, label: '小狐狸', emoji: '🦊' }
-]
-const selectedAnimal = ref<ProtagonistAnimal>('bunny')
+// 音乐氛围（扩展到 8 种）
+const musicMoods = MUSIC_MOODS
+const selectedMood = ref<string>('cheerful')
+
+// 人声类型（6 种）
+const vocalTypes = VOCAL_TYPES
+const selectedVocalType = ref<string>('soft_female')
+
+// 高级参数（响应式对象）
+const advancedParams = reactive<Partial<GenerateNurseryRhymeParams>>({
+  ...DEFAULT_PARAMS
+})
+
+// 兼容旧的 selectedStyle（映射到 selectedMood）
+const selectedStyle = computed<MusicStyle>(() => selectedMood.value as MusicStyle)
+
+// 场景预设分组
+const scenePresetGroups = computed(() => {
+  return [
+    { id: 'time', name: '按时段', presets: scenePresets.filter(p => p.category === 'time') },
+    { id: 'function', name: '按功能', presets: scenePresets.filter(p => p.category === 'function') },
+    { id: 'mood', name: '按氛围', presets: scenePresets.filter(p => p.category === 'mood') }
+  ]
+})
 
 // 生成状态
 const isGenerating = ref(false)
@@ -351,12 +391,44 @@ const currentCategoryName = computed(() => {
 })
 
 const currentStyleName = computed(() => {
-  return musicStyles.find(s => s.value === selectedStyle.value)?.name || ''
+  return musicMoods.find(s => s.value === selectedMood.value)?.label || ''
 })
 
-const currentAnimalName = computed(() => {
-  return protagonistAnimals.find(a => a.value === selectedAnimal.value)?.label || ''
+const currentVocalTypeName = computed(() => {
+  return vocalTypes.find(v => v.value === selectedVocalType.value)?.label || ''
 })
+
+// 选择场景预设
+function selectScenePreset(preset: ScenePreset) {
+  selectedScenePreset.value = preset.id
+
+  // 应用预设参数
+  const presetParams = getScenePresetParams(preset.id)
+
+  if (presetParams.music_mood) {
+    selectedMood.value = presetParams.music_mood
+  }
+  if (presetParams.vocal_type) {
+    selectedVocalType.value = presetParams.vocal_type
+  }
+
+  // 更新高级参数
+  Object.assign(advancedParams, presetParams)
+
+  console.log('[selectScenePreset] 应用预设:', preset.name, presetParams)
+}
+
+// 氛围变化时智能联动
+function onMoodChange(mood: string) {
+  selectedMood.value = mood
+
+  // 获取联动推荐参数
+  const linkage = getMoodLinkageParams(mood)
+  if (Object.keys(linkage).length > 0) {
+    Object.assign(advancedParams, linkage)
+    console.log('[onMoodChange] 智能联动:', mood, linkage)
+  }
+}
 
 
 const canNext = computed(() => {
@@ -940,17 +1012,23 @@ async function startGenerate() {
     // 发起异步生成请求（新版 API，立即返回 task_id）
     console.log('[startGenerate] 发起异步生成请求')
 
-    // 构建请求参数
-    const requestParams: Parameters<typeof generateNurseryRhymeAsync>[0] = {
+    // 构建请求参数（V2 增强版）
+    const requestParams: GenerateNurseryRhymeParams = {
+      // 必填参数
       child_name: childStore.currentChild.name,
       age_months: ageMonths,
       theme_topic: selectedTheme.value.name,
       theme_category: selectedCategory.value,
-      music_style: selectedStyle.value,
-      music_mood: selectedStyle.value,
-      protagonist: {
-        animal: selectedAnimal.value
-      }
+
+      // 核心参数
+      music_mood: selectedMood.value,
+      vocal_type: selectedVocalType.value,
+
+      // 高级参数（来自 advancedParams）
+      ...advancedParams,
+
+      // 兼容旧参数
+      music_style: selectedStyle.value
     }
 
     // 智能创作模式：添加 creation_mode 和 custom_prompt
@@ -958,7 +1036,11 @@ async function startGenerate() {
       requestParams.creation_mode = 'smart'
       requestParams.custom_prompt = customPrompt.value
       console.log('[儿歌] 智能创作模式，描述:', customPrompt.value)
+    } else {
+      requestParams.creation_mode = 'preset'
     }
+
+    console.log('[startGenerate] 请求参数:', JSON.stringify(requestParams, null, 2))
 
     const asyncResult = await generateNurseryRhymeAsync(requestParams)
 
@@ -1021,10 +1103,10 @@ onLoad((options) => {
 
     // 设置从智能创作页面传递的参数
     if (options.music_mood) {
-      selectedStyle.value = options.music_mood as MusicStyle
+      selectedMood.value = options.music_mood
     }
-    if (options.protagonist) {
-      selectedAnimal.value = options.protagonist as ProtagonistAnimal
+    if (options.vocal_type) {
+      selectedVocalType.value = options.vocal_type
     }
 
     // 智能创作模式：跳过主题选择，直接到确认步骤
@@ -1435,11 +1517,160 @@ onLoad((options) => {
   flex-shrink: 0;
 
   &.music { background: rgba($song-primary, 0.12); }
+  &.vocal { background: rgba(#9B59B6, 0.12); }
+  &.preset { background: rgba($accent, 0.12); }
   &.bunny { background: rgba(#FF9F9F, 0.15); }
+}
+
+.section-hint {
+  margin-left: auto;
+  font-size: $font-xs;
+  color: $text-tertiary;
 }
 
 .section-icon {
   font-size: 28rpx;
+}
+
+// ==========================================
+// 场景预设 - 横向滚动卡片
+// ==========================================
+.scene-presets-section {
+  margin-bottom: $spacing-lg;
+  background: $bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-card;
+}
+
+.presets-scroll {
+  width: calc(100% + 32rpx);
+  margin-left: -16rpx;
+  margin-right: -16rpx;
+}
+
+.presets-track {
+  display: flex;
+  gap: $spacing-sm;
+  padding: 0 16rpx;
+  padding-right: 48rpx;
+}
+
+.preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 120rpx;
+  padding: $spacing-sm $spacing-md;
+  background: $bg-soft;
+  border-radius: $radius-md;
+  border: 2rpx solid transparent;
+  transition: all $duration-fast;
+  flex-shrink: 0;
+
+  &.selected {
+    background: rgba($accent, 0.1);
+    border-color: $accent;
+    box-shadow: 0 2rpx 12rpx rgba($accent, 0.2);
+
+    .preset-name {
+      color: $accent;
+      font-weight: $font-semibold;
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.preset-icon {
+  font-size: 36rpx;
+  margin-bottom: 4rpx;
+}
+
+.preset-name {
+  font-size: $font-xs;
+  color: $text-secondary;
+  white-space: nowrap;
+}
+
+// ==========================================
+// 人声类型 - 网格卡片
+// ==========================================
+.vocal-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.vocal-type-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-md $spacing-xs;
+  background: $bg-soft;
+  border-radius: $radius-md;
+  border: 2rpx solid transparent;
+  transition: all $duration-fast;
+
+  &.selected {
+    background: rgba(#9B59B6, 0.08);
+    border-color: #9B59B6;
+    box-shadow: 0 2rpx 12rpx rgba(#9B59B6, 0.15);
+
+    .vocal-name {
+      color: #9B59B6;
+      font-weight: $font-semibold;
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.vocal-icon {
+  font-size: 36rpx;
+  margin-bottom: 8rpx;
+}
+
+.vocal-info {
+  text-align: center;
+}
+
+.vocal-name {
+  display: block;
+  font-size: $font-sm;
+  color: $text-primary;
+  font-weight: $font-medium;
+  margin-bottom: 2rpx;
+}
+
+.vocal-desc {
+  display: block;
+  font-size: 20rpx;
+  color: $text-tertiary;
+  line-height: 1.3;
+}
+
+.vocal-check {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  width: 28rpx;
+  height: 28rpx;
+  background: #9B59B6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16rpx;
+  color: $text-white;
+  font-weight: $font-bold;
 }
 
 .section-title {

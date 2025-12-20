@@ -1,0 +1,1594 @@
+# 儿歌创作增强参数实施计划
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** 实现儿歌创作页面的增强参数系统，包括三层递进结构、16个场景预设、31个参数、智能联动
+
+**Architecture:**
+- 创建独立的配置数据文件 `nurseryRhymeConfig.ts` 存放所有选项数据
+- 修改 `nursery-rhyme.vue` 页面实现三层递进 UI
+- 利用 wot-design-uni 组件库的 `wd-collapse`、`wd-slider` 等组件
+
+**Tech Stack:** Vue 3, TypeScript, uni-app, wot-design-uni, SCSS
+
+---
+
+## Task 1: 创建参数配置数据文件
+
+**Files:**
+- Create: `miniprogram/src/config/nurseryRhymeConfig.ts`
+
+**Step 1: 创建配置文件基础结构**
+
+```typescript
+// miniprogram/src/config/nurseryRhymeConfig.ts
+
+/**
+ * 儿歌创作增强参数配置
+ * 基于 Suno V5 能力设计
+ */
+
+// ============================================
+// 类型定义
+// ============================================
+
+// 场景预设
+export interface ScenePreset {
+  id: string
+  name: string
+  icon: string
+  category: 'time' | 'function' | 'mood'
+  description?: string
+  params: Partial<NurseryRhymeFullParams>
+}
+
+// 完整参数接口
+export interface NurseryRhymeFullParams {
+  // 核心参数
+  theme_topic: string
+  theme_category: string
+  music_mood: string
+  vocal_type: string
+
+  // 音乐风格
+  music_genre: string[]
+  tempo: number
+  energy_level: number
+
+  // 人声演唱
+  vocal_range: string
+  vocal_emotion: string
+  vocal_style: string[]
+  vocal_effects: string[]
+  vocal_regional: string
+
+  // 乐器配置
+  instruments: string[]
+
+  // 音效元素
+  sound_effects: string[]
+
+  // 歌词设置
+  lyric_complexity: number
+  repetition_level: number
+
+  // 歌曲结构
+  song_structure: string
+  duration_preference: number
+  action_types: string[]
+
+  // 语言文化
+  language: string
+  cultural_style: string
+
+  // 个性化
+  favorite_characters: string[]
+  favorite_animals: string[]
+  favorite_colors: string[]
+  educational_focus: string[]
+
+  // Suno 进阶
+  style_weight: number
+  creativity: number
+  negative_tags: string
+  style_description: string
+  seed?: number
+
+  // 智能模式
+  custom_prompt?: string
+  inspiration_keywords: string[]
+}
+
+// 选项项接口
+export interface OptionItem {
+  value: string
+  label: string
+  icon?: string
+  description?: string
+}
+
+// 分组选项接口
+export interface GroupedOptions {
+  group: string
+  icon?: string
+  options: OptionItem[]
+}
+```
+
+**Step 2: 添加场景预设数据**
+
+```typescript
+// ============================================
+// 场景预设（16个）
+// ============================================
+
+export const SCENE_PRESETS: ScenePreset[] = [
+  // 按使用时段（6个）
+  {
+    id: 'morning',
+    name: '早晨唤醒',
+    icon: '🌅',
+    category: 'time',
+    params: {
+      music_mood: 'cheerful',
+      tempo: 120,
+      energy_level: 7,
+      vocal_type: 'energetic',
+      music_genre: ['pop', 'children'],
+      instruments: ['xylophone', 'ukulele', 'tambourine']
+    }
+  },
+  {
+    id: 'daytime',
+    name: '白天玩耍',
+    icon: '☀️',
+    category: 'time',
+    params: {
+      music_mood: 'playful',
+      tempo: 130,
+      energy_level: 8,
+      vocal_type: 'child',
+      music_genre: ['children', 'dance'],
+      sound_effects: ['laugh', 'cheer']
+    }
+  },
+  {
+    id: 'naptime',
+    name: '午睡时间',
+    icon: '😴',
+    category: 'time',
+    params: {
+      music_mood: 'gentle',
+      tempo: 75,
+      energy_level: 2,
+      vocal_type: 'soft_female',
+      music_genre: ['lullaby', 'ambient'],
+      instruments: ['piano', 'harp']
+    }
+  },
+  {
+    id: 'bathtime',
+    name: '洗澡时光',
+    icon: '🛁',
+    category: 'time',
+    params: {
+      music_mood: 'cheerful',
+      tempo: 100,
+      energy_level: 5,
+      vocal_type: 'child',
+      sound_effects: ['water', 'splash'],
+      action_types: ['clap', 'sway']
+    }
+  },
+  {
+    id: 'bedtime',
+    name: '睡前安抚',
+    icon: '🌙',
+    category: 'time',
+    params: {
+      music_mood: 'lullaby',
+      tempo: 65,
+      energy_level: 1,
+      vocal_type: 'soft_female',
+      music_genre: ['lullaby'],
+      instruments: ['piano', 'harp', 'music_box']
+    }
+  },
+  {
+    id: 'travel',
+    name: '外出旅途',
+    icon: '🚗',
+    category: 'time',
+    params: {
+      music_mood: 'relaxed',
+      tempo: 95,
+      energy_level: 4,
+      sound_effects: ['car_horn', 'train'],
+      action_types: ['sway']
+    }
+  },
+
+  // 按功能目的（5个）
+  {
+    id: 'habit',
+    name: '习惯养成',
+    icon: '🦷',
+    category: 'function',
+    params: {
+      music_mood: 'cheerful',
+      tempo: 105,
+      repetition_level: 8,
+      action_types: ['clap', 'stomp', 'finger'],
+      educational_focus: ['hygiene', 'self_care']
+    }
+  },
+  {
+    id: 'learning',
+    name: '认知学习',
+    icon: '📚',
+    category: 'function',
+    params: {
+      music_mood: 'cheerful',
+      lyric_complexity: 5,
+      vocal_type: 'clear_female',
+      educational_focus: ['math', 'language', 'cognition']
+    }
+  },
+  {
+    id: 'comfort',
+    name: '情绪安抚',
+    icon: '🤗',
+    category: 'function',
+    params: {
+      music_mood: 'gentle',
+      tempo: 80,
+      energy_level: 3,
+      vocal_emotion: 'tender',
+      instruments: ['strings', 'piano'],
+      educational_focus: ['emotion']
+    }
+  },
+  {
+    id: 'bonding',
+    name: '亲子互动',
+    icon: '👨‍👩‍👧',
+    category: 'function',
+    params: {
+      music_mood: 'cheerful',
+      vocal_type: 'duet',
+      song_structure: 'call_response',
+      action_types: ['parent_child']
+    }
+  },
+  {
+    id: 'dance',
+    name: '律动游戏',
+    icon: '💃',
+    category: 'function',
+    params: {
+      music_mood: 'energetic',
+      tempo: 135,
+      energy_level: 8,
+      instruments: ['drums', 'percussion'],
+      action_types: ['jump', 'spin', 'sway']
+    }
+  },
+
+  // 按情绪氛围（5个）
+  {
+    id: 'party',
+    name: '欢快派对',
+    icon: '🎉',
+    category: 'mood',
+    params: {
+      music_mood: 'cheerful',
+      tempo: 140,
+      energy_level: 9,
+      music_genre: ['pop', 'dance'],
+      sound_effects: ['cheer', 'fireworks']
+    }
+  },
+  {
+    id: 'sweet',
+    name: '温柔甜蜜',
+    icon: '🌸',
+    category: 'mood',
+    params: {
+      music_mood: 'gentle',
+      tempo: 70,
+      energy_level: 3,
+      music_genre: ['folk', 'acoustic'],
+      vocal_type: 'soft_female',
+      instruments: ['piano', 'guitar']
+    }
+  },
+  {
+    id: 'funny',
+    name: '俏皮搞怪',
+    icon: '🎪',
+    category: 'mood',
+    params: {
+      music_mood: 'playful',
+      tempo: 115,
+      energy_level: 6,
+      vocal_type: 'child',
+      sound_effects: ['funny', 'boing', 'whistle']
+    }
+  },
+  {
+    id: 'magical',
+    name: '神秘探索',
+    icon: '✨',
+    category: 'mood',
+    params: {
+      music_mood: 'mysterious',
+      tempo: 95,
+      energy_level: 5,
+      music_genre: ['new_age', 'cinematic'],
+      sound_effects: ['magic', 'fairy'],
+      song_structure: 'narrative'
+    }
+  },
+  {
+    id: 'active',
+    name: '活力四射',
+    icon: '🏃',
+    category: 'mood',
+    params: {
+      music_mood: 'energetic',
+      tempo: 145,
+      energy_level: 9,
+      music_genre: ['electronic', 'dance'],
+      action_types: ['jump', 'run']
+    }
+  }
+]
+```
+
+**Step 3: 添加核心参数选项**
+
+```typescript
+// ============================================
+// 核心参数选项
+// ============================================
+
+// 音乐氛围（8种）
+export const MUSIC_MOODS: OptionItem[] = [
+  { value: 'cheerful', label: '欢快活泼', icon: '🎉', description: '节奏明快，充满活力' },
+  { value: 'gentle', label: '温柔舒缓', icon: '🌸', description: '轻柔优美，温馨甜蜜' },
+  { value: 'playful', label: '俏皮可爱', icon: '🎈', description: '趣味十足，朗朗上口' },
+  { value: 'lullaby', label: '摇篮曲风', icon: '🌙', description: '安静柔和，适合入睡' },
+  { value: 'energetic', label: '活力动感', icon: '⚡', description: '热情奔放，动感十足' },
+  { value: 'mysterious', label: '神秘奇幻', icon: '✨', description: '梦幻探险，充满想象' },
+  { value: 'inspiring', label: '励志温暖', icon: '💪', description: '正能量，鼓励成长' },
+  { value: 'relaxed', label: '悠闲放松', icon: '🍃', description: '轻松自在，无压力' }
+]
+
+// 人声类型（6种）
+export const VOCAL_TYPES: OptionItem[] = [
+  { value: 'soft_female', label: '甜美女声', icon: '👩', description: '温柔清亮，适合大多数儿歌' },
+  { value: 'warm_male', label: '温暖男声', icon: '👨', description: '稳重亲切，适合励志/教育类' },
+  { value: 'child', label: '可爱童声', icon: '👧', description: '稚嫩天真，代入感强' },
+  { value: 'chorus', label: '欢乐合唱', icon: '👨‍👩‍👧', description: '多人声，氛围感强' },
+  { value: 'duet', label: '亲子对唱', icon: '👩‍👦', description: '一大一小，互动感强' },
+  { value: 'instrumental', label: '纯音乐', icon: '🎵', description: '无人声，纯乐器演奏' }
+]
+```
+
+**Step 4: 添加音乐流派选项**
+
+```typescript
+// ============================================
+// 高级参数 - 音乐风格
+// ============================================
+
+// 音乐流派（分组）
+export const MUSIC_GENRES: GroupedOptions[] = [
+  {
+    group: '儿童专属',
+    options: [
+      { value: 'children', label: '儿歌' },
+      { value: 'nursery', label: '童谣' },
+      { value: 'lullaby', label: '摇篮曲' },
+      { value: 'educational', label: '教育歌曲' },
+      { value: 'animation', label: '动画原声' }
+    ]
+  },
+  {
+    group: '流行现代',
+    options: [
+      { value: 'pop', label: '流行' },
+      { value: 'edm', label: '电子舞曲' },
+      { value: 'synth_pop', label: 'Synth-Pop' },
+      { value: 'kpop', label: 'K-Pop' },
+      { value: 'jpop', label: 'J-Pop' },
+      { value: 'cpop', label: '华语流行' }
+    ]
+  },
+  {
+    group: '民谣原声',
+    options: [
+      { value: 'folk', label: '民谣' },
+      { value: 'country', label: '乡村' },
+      { value: 'acoustic', label: 'Acoustic' },
+      { value: 'indie_folk', label: '独立民谣' },
+      { value: 'world', label: '世界音乐' }
+    ]
+  },
+  {
+    group: '古典优雅',
+    options: [
+      { value: 'classical', label: '古典改编' },
+      { value: 'orchestral', label: '交响乐' },
+      { value: 'chamber', label: '室内乐' },
+      { value: 'opera', label: '歌剧改编' },
+      { value: 'neoclassical', label: '新古典' }
+    ]
+  },
+  {
+    group: '爵士蓝调',
+    options: [
+      { value: 'jazz', label: '爵士' },
+      { value: 'blues', label: '布鲁斯' },
+      { value: 'bossa_nova', label: 'Bossa Nova' },
+      { value: 'swing', label: 'Swing' },
+      { value: 'funk', label: '放克' }
+    ]
+  },
+  {
+    group: '节奏韵律',
+    options: [
+      { value: 'hiphop', label: '嘻哈' },
+      { value: 'rap', label: '说唱' },
+      { value: 'rnb', label: 'R&B' },
+      { value: 'reggae', label: '雷鬼' },
+      { value: 'latin', label: '拉丁' }
+    ]
+  },
+  {
+    group: '电子实验',
+    options: [
+      { value: 'ambient', label: 'Ambient' },
+      { value: 'lofi', label: 'Lo-fi' },
+      { value: 'chillhop', label: 'Chillhop' },
+      { value: 'electronic', label: '电子' },
+      { value: 'house', label: 'House' },
+      { value: 'trance', label: 'Trance' }
+    ]
+  },
+  {
+    group: '摇滚另类',
+    options: [
+      { value: 'rock', label: '摇滚' },
+      { value: 'indie_rock', label: '独立摇滚' },
+      { value: 'punk', label: '朋克' },
+      { value: 'alternative', label: '另类' }
+    ]
+  },
+  {
+    group: '特殊风格',
+    options: [
+      { value: 'game', label: '游戏音乐' },
+      { value: 'cinematic', label: '电影配乐' },
+      { value: 'new_age', label: 'New Age' },
+      { value: 'acapella', label: 'A Cappella' },
+      { value: 'gospel', label: 'Gospel' }
+    ]
+  }
+]
+
+// 节奏速度提示
+export const TEMPO_HINTS: { min: number; max: number; label: string; description: string }[] = [
+  { min: 60, max: 80, label: '极慢', description: '适合摇篮曲/冥想' },
+  { min: 80, max: 100, label: '慢速', description: '适合舒缓放松' },
+  { min: 100, max: 120, label: '中速', description: '适合日常儿歌' },
+  { min: 120, max: 140, label: '中快', description: '适合活泼欢快' },
+  { min: 140, max: 180, label: '快速', description: '适合动感舞蹈' }
+]
+
+// 能量强度提示
+export const ENERGY_HINTS: { min: number; max: number; label: string }[] = [
+  { min: 1, max: 2, label: '静谧' },
+  { min: 3, max: 4, label: '轻柔' },
+  { min: 5, max: 6, label: '温和' },
+  { min: 7, max: 8, label: '活力' },
+  { min: 9, max: 10, label: '激昂' }
+]
+```
+
+**Step 5: 添加人声和乐器选项**
+
+```typescript
+// ============================================
+// 高级参数 - 人声演唱
+// ============================================
+
+// 音域选择
+export const VOCAL_RANGES: OptionItem[] = [
+  { value: 'high', label: '高音', description: '明亮清澈，穿透力强' },
+  { value: 'mid', label: '中音', description: '自然舒适，适用广泛' },
+  { value: 'low', label: '低音', description: '沉稳温暖，有安全感' }
+]
+
+// 情感表达
+export const VOCAL_EMOTIONS: OptionItem[] = [
+  { value: 'happy', label: '欢快' },
+  { value: 'tender', label: '深情' },
+  { value: 'playful', label: '俏皮' },
+  { value: 'calm', label: '沉稳' },
+  { value: 'dreamy', label: '梦幻' },
+  { value: 'passionate', label: '激昂' },
+  { value: 'gentle', label: '温柔' },
+  { value: 'mysterious', label: '神秘' }
+]
+
+// 演唱技巧
+export const VOCAL_TECHNIQUES: OptionItem[] = [
+  { value: 'clear', label: '清唱' },
+  { value: 'harmony', label: '和声伴唱' },
+  { value: 'rap', label: '说唱段落' },
+  { value: 'chant', label: '吟唱' },
+  { value: 'hum', label: '哼唱' },
+  { value: 'breathy', label: '气声' },
+  { value: 'vibrato', label: '颤音' }
+]
+
+// 声音效果
+export const VOCAL_EFFECTS: OptionItem[] = [
+  { value: 'reverb', label: '混响', description: '增加空间感' },
+  { value: 'delay', label: '延迟', description: '回声效果' },
+  { value: 'autotune', label: '电音处理', description: '机器人效果' },
+  { value: 'vintage', label: '复古质感', description: '老唱片温暖感' }
+]
+
+// 地域特色
+export const VOCAL_REGIONALS: OptionItem[] = [
+  { value: 'american', label: '美式' },
+  { value: 'british', label: '英伦' },
+  { value: 'japanese', label: '日系' },
+  { value: 'korean', label: '韩系' },
+  { value: 'chinese', label: '中国风' },
+  { value: 'latin', label: '拉丁' }
+]
+
+// ============================================
+// 高级参数 - 乐器配置
+// ============================================
+
+// 乐器（按家族分组）
+export const INSTRUMENTS_BY_FAMILY: GroupedOptions[] = [
+  {
+    group: '键盘类',
+    icon: '🎹',
+    options: [
+      { value: 'piano', label: '钢琴' },
+      { value: 'electric_piano', label: '电钢琴' },
+      { value: 'organ', label: '风琴' },
+      { value: 'accordion', label: '手风琴' },
+      { value: 'synth', label: '合成器' },
+      { value: 'rhodes', label: 'Rhodes' },
+      { value: 'toy_piano', label: '玩具钢琴' }
+    ]
+  },
+  {
+    group: '弦乐类',
+    icon: '🎸',
+    options: [
+      { value: 'guitar', label: '吉他' },
+      { value: 'ukulele', label: '尤克里里' },
+      { value: 'violin', label: '小提琴' },
+      { value: 'cello', label: '大提琴' },
+      { value: 'harp', label: '竖琴' },
+      { value: 'bass', label: '贝斯' },
+      { value: 'mandolin', label: '曼陀林' }
+    ]
+  },
+  {
+    group: '管乐类',
+    icon: '🎺',
+    options: [
+      { value: 'flute', label: '长笛' },
+      { value: 'saxophone', label: '萨克斯' },
+      { value: 'trumpet', label: '小号' },
+      { value: 'clarinet', label: '单簧管' },
+      { value: 'harmonica', label: '口琴' },
+      { value: 'recorder', label: '竖笛' },
+      { value: 'piccolo', label: '短笛' }
+    ]
+  },
+  {
+    group: '打击类',
+    icon: '🥁',
+    options: [
+      { value: 'drums', label: '架子鼓' },
+      { value: 'xylophone', label: '木琴' },
+      { value: 'glockenspiel', label: '铁琴' },
+      { value: 'triangle', label: '三角铁' },
+      { value: 'shaker', label: '沙锤' },
+      { value: 'tambourine', label: '铃鼓' },
+      { value: 'bongo', label: '手鼓' },
+      { value: 'cajon', label: '卡宏鼓' }
+    ]
+  },
+  {
+    group: '电子类',
+    icon: '🎛️',
+    options: [
+      { value: 'synth_pad', label: '合成器Pad' },
+      { value: 'drum_machine', label: '电子鼓' },
+      { value: '808', label: '808' },
+      { value: 'sampler', label: '采样器' },
+      { value: 'sequencer', label: '音序器' }
+    ]
+  },
+  {
+    group: '民族类',
+    icon: '🪕',
+    options: [
+      { value: 'guzheng', label: '古筝' },
+      { value: 'erhu', label: '二胡' },
+      { value: 'pipa', label: '琵琶' },
+      { value: 'dizi', label: '笛子' },
+      { value: 'suona', label: '唢呐' },
+      { value: 'african_drum', label: '非洲鼓' },
+      { value: 'steel_drum', label: '钢鼓' }
+    ]
+  }
+]
+
+// 乐器（按氛围分组）
+export const INSTRUMENTS_BY_MOOD: GroupedOptions[] = [
+  {
+    group: '温暖柔和',
+    options: [
+      { value: 'piano', label: '钢琴' },
+      { value: 'guitar', label: '吉他' },
+      { value: 'harp', label: '竖琴' },
+      { value: 'strings', label: '弦乐' }
+    ]
+  },
+  {
+    group: '活泼欢快',
+    options: [
+      { value: 'xylophone', label: '木琴' },
+      { value: 'tambourine', label: '铃鼓' },
+      { value: 'ukulele', label: '尤克里里' },
+      { value: 'bongo', label: '手鼓' }
+    ]
+  },
+  {
+    group: '现代电子',
+    options: [
+      { value: 'synth', label: '合成器' },
+      { value: 'drum_machine', label: '电子鼓' },
+      { value: '808', label: '808' }
+    ]
+  },
+  {
+    group: '民族特色',
+    options: [
+      { value: 'guzheng', label: '古筝' },
+      { value: 'dizi', label: '笛子' },
+      { value: 'african_drum', label: '非洲鼓' }
+    ]
+  },
+  {
+    group: '爵士风情',
+    options: [
+      { value: 'saxophone', label: '萨克斯' },
+      { value: 'piano', label: '钢琴' },
+      { value: 'bass', label: '贝斯' },
+      { value: 'drums', label: '架子鼓' }
+    ]
+  }
+]
+```
+
+**Step 6: 添加音效和其他选项**
+
+```typescript
+// ============================================
+// 高级参数 - 音效元素
+// ============================================
+
+export const SOUND_EFFECTS: GroupedOptions[] = [
+  {
+    group: '动物声',
+    icon: '🐾',
+    options: [
+      { value: 'dog', label: '小狗汪汪' },
+      { value: 'cat', label: '小猫喵喵' },
+      { value: 'bird', label: '小鸟叽叽' },
+      { value: 'lion', label: '狮子吼' },
+      { value: 'frog', label: '青蛙呱呱' },
+      { value: 'chicken', label: '小鸡叽叽' },
+      { value: 'cow', label: '牛哞哞' },
+      { value: 'sheep', label: '羊咩咩' },
+      { value: 'horse', label: '马嘶鸣' },
+      { value: 'elephant', label: '大象叫' }
+    ]
+  },
+  {
+    group: '自然声',
+    icon: '🌿',
+    options: [
+      { value: 'rain', label: '下雨' },
+      { value: 'water', label: '流水' },
+      { value: 'wind', label: '风声' },
+      { value: 'thunder', label: '雷声' },
+      { value: 'waves', label: '海浪' },
+      { value: 'birds_chirping', label: '鸟鸣' },
+      { value: 'insects', label: '虫鸣' },
+      { value: 'leaves', label: '落叶沙沙' },
+      { value: 'waterfall', label: '瀑布' },
+      { value: 'campfire', label: '篝火' }
+    ]
+  },
+  {
+    group: '趣味声',
+    icon: '😄',
+    options: [
+      { value: 'laugh', label: '笑声' },
+      { value: 'cheer', label: '欢呼' },
+      { value: 'balloon', label: '气球' },
+      { value: 'boing', label: '弹簧跳跃' },
+      { value: 'slip', label: '滑稽摔倒' },
+      { value: 'sneeze', label: '打喷嚏' },
+      { value: 'hiccup', label: '打嗝' },
+      { value: 'whistle', label: '吹口哨' },
+      { value: 'kiss', label: '亲吻' },
+      { value: 'clap', label: '拍手' }
+    ]
+  },
+  {
+    group: '交通声',
+    icon: '🚗',
+    options: [
+      { value: 'car_horn', label: '汽车喇叭' },
+      { value: 'train', label: '火车汽笛' },
+      { value: 'airplane', label: '飞机起飞' },
+      { value: 'ship', label: '轮船鸣笛' },
+      { value: 'bicycle', label: '自行车铃' },
+      { value: 'subway', label: '地铁报站' }
+    ]
+  },
+  {
+    group: '生活声',
+    icon: '🏠',
+    options: [
+      { value: 'doorbell', label: '门铃' },
+      { value: 'alarm', label: '闹钟' },
+      { value: 'cooking', label: '厨房烹饪' },
+      { value: 'knock', label: '敲门' },
+      { value: 'phone', label: '电话铃' },
+      { value: 'door', label: '开门关门' },
+      { value: 'footsteps', label: '脚步声' },
+      { value: 'page_flip', label: '翻书' }
+    ]
+  },
+  {
+    group: '节日声',
+    icon: '🎉',
+    options: [
+      { value: 'fireworks', label: '烟花' },
+      { value: 'firecrackers', label: '鞭炮' },
+      { value: 'jingle', label: '圣诞铃铛' },
+      { value: 'party_horn', label: '派对喇叭' },
+      { value: 'candle_blow', label: '生日吹蜡烛' },
+      { value: 'unwrap', label: '礼物拆封' }
+    ]
+  },
+  {
+    group: '科幻声',
+    icon: '🚀',
+    options: [
+      { value: 'robot', label: '机器人' },
+      { value: 'spaceship', label: '太空飞船' },
+      { value: 'laser', label: '激光' },
+      { value: 'beep', label: '电子滴答' },
+      { value: 'portal', label: '传送门' },
+      { value: 'tech', label: '未来科技' }
+    ]
+  },
+  {
+    group: '奇幻声',
+    icon: '🧙',
+    options: [
+      { value: 'magic', label: '魔法施放' },
+      { value: 'fairy', label: '精灵飞舞' },
+      { value: 'castle', label: '城堡大门' },
+      { value: 'dragon', label: '龙吟' },
+      { value: 'wand', label: '魔杖挥动' },
+      { value: 'treasure', label: '宝箱开启' }
+    ]
+  },
+  {
+    group: '游戏声',
+    icon: '🎮',
+    options: [
+      { value: 'level_up', label: '升级' },
+      { value: 'coin', label: '金币' },
+      { value: 'victory', label: '胜利' },
+      { value: 'jump', label: '跳跃' },
+      { value: 'power_up', label: '道具获得' },
+      { value: 'complete', label: '任务完成' }
+    ]
+  }
+]
+```
+
+**Step 7: 添加歌词、结构、语言等选项**
+
+```typescript
+// ============================================
+// 高级参数 - 歌词设置
+// ============================================
+
+// 歌词复杂度提示
+export const LYRIC_COMPLEXITY_HINTS: { min: number; max: number; label: string; description: string }[] = [
+  { min: 1, max: 2, label: '极简', description: '单词重复，适合 1-2 岁' },
+  { min: 3, max: 4, label: '简单', description: '短句为主，适合 2-3 岁' },
+  { min: 5, max: 6, label: '中等', description: '完整句子，适合 3-4 岁' },
+  { min: 7, max: 8, label: '丰富', description: '多段落，适合 4-5 岁' },
+  { min: 9, max: 10, label: '复杂', description: '故事性强，适合 5-6 岁' }
+]
+
+// 重复程度提示
+export const REPETITION_HINTS: { min: number; max: number; label: string; description: string }[] = [
+  { min: 1, max: 2, label: '极少', description: '几乎不重复，变化丰富' },
+  { min: 3, max: 4, label: '较少', description: '少量重复，保持新鲜' },
+  { min: 5, max: 6, label: '适中', description: '适度重复，平衡变化' },
+  { min: 7, max: 8, label: '较多', description: '副歌多次重复，易记忆' },
+  { min: 9, max: 10, label: '洗脑循环', description: '高度重复，过耳不忘' }
+]
+
+// ============================================
+// 高级参数 - 歌曲结构
+// ============================================
+
+// 歌曲结构类型
+export const SONG_STRUCTURES: OptionItem[] = [
+  { value: 'simple', label: '简单循环', description: 'A-A-A' },
+  { value: 'standard', label: '标准结构', description: 'A-B-A-B' },
+  { value: 'full', label: '完整结构', description: 'Intro-A-B-A-B-Outro' },
+  { value: 'chorus_only', label: '纯副歌循环', description: 'B-B-B' },
+  { value: 'progressive', label: '渐进式', description: 'A-A\'-A\'\'-B' },
+  { value: 'narrative', label: '故事叙事', description: 'A-B-C-D' },
+  { value: 'call_response', label: '问答互动', description: 'Q-A-Q-A' },
+  { value: 'rap', label: '说唱结构', description: 'Rap-B-Rap-B' },
+  { value: 'aaba', label: 'AABA 曲式', description: 'A-A-B-A' },
+  { value: 'custom', label: '自定义', description: '输入标签' }
+]
+
+// 可用的结构标签
+export const STRUCTURE_TAGS = [
+  '[Intro]', '[Verse]', '[Chorus]', '[Bridge]', '[Outro]',
+  '[Pre-Chorus]', '[Interlude]', '[Solo]', '[Rap]', '[Whisper]'
+]
+
+// 动作指引类型
+export const ACTION_TYPES: OptionItem[] = [
+  { value: 'clap', label: '拍手', icon: '👏', description: '跟随节奏拍手' },
+  { value: 'stomp', label: '跺脚', icon: '🦶', description: '跟随节奏跺脚' },
+  { value: 'spin', label: '转圈', icon: '🔄', description: '原地转圈圈' },
+  { value: 'sway', label: '摇摆', icon: '💃', description: '左右摇摆身体' },
+  { value: 'jump', label: '跳跃', icon: '🦘', description: '跟随节奏跳跃' },
+  { value: 'finger', label: '手指操', icon: '🖐️', description: '手指动作配合' },
+  { value: 'expression', label: '表情互动', icon: '😊', description: '做各种表情' },
+  { value: 'parent_child', label: '亲子配合', icon: '👨‍👩‍👧', description: '需要大人配合' }
+]
+
+// ============================================
+// 高级参数 - 语言文化
+// ============================================
+
+// 语言选项
+export const LANGUAGES: GroupedOptions[] = [
+  {
+    group: '常用语言',
+    options: [
+      { value: 'chinese', label: '中文' },
+      { value: 'english', label: '英文' },
+      { value: 'mixed', label: '中英混合' },
+      { value: 'cantonese', label: '粤语' }
+    ]
+  },
+  {
+    group: '亚洲语言',
+    options: [
+      { value: 'japanese', label: '日语' },
+      { value: 'korean', label: '韩语' },
+      { value: 'thai', label: '泰语' },
+      { value: 'vietnamese', label: '越南语' },
+      { value: 'hindi', label: '印地语' }
+    ]
+  },
+  {
+    group: '欧洲语言',
+    options: [
+      { value: 'french', label: '法语' },
+      { value: 'german', label: '德语' },
+      { value: 'spanish', label: '西班牙语' },
+      { value: 'italian', label: '意大利语' },
+      { value: 'portuguese', label: '葡萄牙语' },
+      { value: 'russian', label: '俄语' }
+    ]
+  },
+  {
+    group: '其他语言',
+    options: [
+      { value: 'arabic', label: '阿拉伯语' },
+      { value: 'hebrew', label: '希伯来语' },
+      { value: 'turkish', label: '土耳其语' }
+    ]
+  }
+]
+
+// 文化风格
+export const CULTURAL_STYLES: GroupedOptions[] = [
+  {
+    group: '中华文化',
+    options: [
+      { value: 'chinese_traditional', label: '中国传统' },
+      { value: 'chinese_modern', label: '中国现代' },
+      { value: 'hk_tw', label: '港台风' },
+      { value: 'guofeng', label: '古风国潮' }
+    ]
+  },
+  {
+    group: '东亚文化',
+    options: [
+      { value: 'japanese_healing', label: '日系治愈' },
+      { value: 'korean_trend', label: '韩流时尚' },
+      { value: 'japanese_traditional', label: '和风' },
+      { value: 'anime', label: '动漫风' }
+    ]
+  },
+  {
+    group: '欧美文化',
+    options: [
+      { value: 'american_pop', label: '美式流行' },
+      { value: 'british', label: '英伦优雅' },
+      { value: 'french', label: '法式浪漫' },
+      { value: 'nordic', label: '北欧极简' }
+    ]
+  },
+  {
+    group: '拉丁文化',
+    options: [
+      { value: 'latin', label: '拉丁热情' },
+      { value: 'brazilian', label: '巴西桑巴' },
+      { value: 'mexican', label: '墨西哥' },
+      { value: 'flamenco', label: '西班牙弗拉明戈' }
+    ]
+  },
+  {
+    group: '其他文化',
+    options: [
+      { value: 'african', label: '非洲节奏' },
+      { value: 'bollywood', label: '印度宝莱坞' },
+      { value: 'middle_eastern', label: '中东异域' },
+      { value: 'celtic', label: '凯尔特神秘' },
+      { value: 'southeast_asian', label: '东南亚热带' },
+      { value: 'mediterranean', label: '地中海阳光' },
+      { value: 'hawaiian', label: '夏威夷风情' }
+    ]
+  }
+]
+```
+
+**Step 8: 添加个性化和教育目标选项**
+
+```typescript
+// ============================================
+// 高级参数 - 个性化定制
+// ============================================
+
+// 喜欢的角色
+export const FAVORITE_CHARACTERS: GroupedOptions[] = [
+  {
+    group: '童话角色',
+    options: [
+      { value: 'princess', label: '公主' },
+      { value: 'prince', label: '王子' },
+      { value: 'fairy', label: '仙女' },
+      { value: 'elf', label: '精灵' },
+      { value: 'dwarf', label: '小矮人' },
+      { value: 'witch_good', label: '善良巫婆' },
+      { value: 'giant', label: '巨人' }
+    ]
+  },
+  {
+    group: '动画角色',
+    options: [
+      { value: 'superhero', label: '超级英雄' },
+      { value: 'robot', label: '机器人' },
+      { value: 'magical_girl', label: '魔法少女' },
+      { value: 'monster', label: '小怪兽' },
+      { value: 'cartoon_animal', label: '卡通动物' }
+    ]
+  },
+  {
+    group: '职业角色',
+    options: [
+      { value: 'doctor', label: '医生' },
+      { value: 'firefighter', label: '消防员' },
+      { value: 'police', label: '警察' },
+      { value: 'teacher', label: '老师' },
+      { value: 'astronaut', label: '宇航员' },
+      { value: 'chef', label: '厨师' },
+      { value: 'scientist', label: '科学家' }
+    ]
+  },
+  {
+    group: '奇幻生物',
+    options: [
+      { value: 'unicorn', label: '独角兽' },
+      { value: 'dragon_friendly', label: '友善龙' },
+      { value: 'phoenix', label: '凤凰' },
+      { value: 'mermaid', label: '美人鱼' },
+      { value: 'dinosaur', label: '小恐龙' },
+      { value: 'alien', label: '外星人' }
+    ]
+  }
+]
+
+// 喜欢的动物
+export const FAVORITE_ANIMALS: GroupedOptions[] = [
+  {
+    group: '哺乳动物',
+    options: [
+      { value: 'rabbit', label: '兔子' },
+      { value: 'bear', label: '小熊' },
+      { value: 'cat', label: '小猫' },
+      { value: 'dog', label: '小狗' },
+      { value: 'panda', label: '熊猫' },
+      { value: 'fox', label: '狐狸' },
+      { value: 'lion', label: '狮子' },
+      { value: 'tiger', label: '老虎' },
+      { value: 'elephant', label: '大象' },
+      { value: 'monkey', label: '猴子' },
+      { value: 'squirrel', label: '松鼠' }
+    ]
+  },
+  {
+    group: '鸟类',
+    options: [
+      { value: 'bird', label: '小鸟' },
+      { value: 'parrot', label: '鹦鹉' },
+      { value: 'owl', label: '猫头鹰' },
+      { value: 'penguin', label: '企鹅' },
+      { value: 'chicken', label: '小鸡' },
+      { value: 'swan', label: '天鹅' },
+      { value: 'peacock', label: '孔雀' }
+    ]
+  },
+  {
+    group: '海洋生物',
+    options: [
+      { value: 'fish', label: '小鱼' },
+      { value: 'dolphin', label: '海豚' },
+      { value: 'whale', label: '鲸鱼' },
+      { value: 'turtle', label: '海龟' },
+      { value: 'octopus', label: '章鱼' },
+      { value: 'crab', label: '螃蟹' },
+      { value: 'starfish', label: '海星' }
+    ]
+  },
+  {
+    group: '昆虫',
+    options: [
+      { value: 'butterfly', label: '蝴蝶' },
+      { value: 'bee', label: '蜜蜂' },
+      { value: 'ladybug', label: '瓢虫' },
+      { value: 'dragonfly', label: '蜻蜓' },
+      { value: 'firefly', label: '萤火虫' }
+    ]
+  },
+  {
+    group: '恐龙',
+    options: [
+      { value: 't_rex', label: '霸王龙' },
+      { value: 'triceratops', label: '三角龙' },
+      { value: 'pterodactyl', label: '翼龙' },
+      { value: 'stegosaurus', label: '剑龙' },
+      { value: 'brachiosaurus', label: '腕龙' }
+    ]
+  },
+  {
+    group: '神话动物',
+    options: [
+      { value: 'dragon', label: '龙' },
+      { value: 'phoenix', label: '凤凰' },
+      { value: 'qilin', label: '麒麟' },
+      { value: 'unicorn', label: '独角兽' }
+    ]
+  }
+]
+
+// 喜欢的颜色
+export const FAVORITE_COLORS: GroupedOptions[] = [
+  {
+    group: '基础色',
+    options: [
+      { value: 'red', label: '红', icon: '🔴' },
+      { value: 'orange', label: '橙', icon: '🟠' },
+      { value: 'yellow', label: '黄', icon: '🟡' },
+      { value: 'green', label: '绿', icon: '🟢' },
+      { value: 'blue', label: '蓝', icon: '🔵' },
+      { value: 'purple', label: '紫', icon: '🟣' },
+      { value: 'pink', label: '粉', icon: '💗' },
+      { value: 'white', label: '白', icon: '⚪' },
+      { value: 'black', label: '黑', icon: '⚫' },
+      { value: 'brown', label: '棕', icon: '🟤' }
+    ]
+  },
+  {
+    group: '渐变色',
+    options: [
+      { value: 'rainbow', label: '彩虹', icon: '🌈' },
+      { value: 'sunset', label: '日落渐变', icon: '🌅' },
+      { value: 'ocean', label: '海洋渐变', icon: '🌊' },
+      { value: 'sakura', label: '樱花渐变', icon: '🌸' }
+    ]
+  },
+  {
+    group: '特殊色',
+    options: [
+      { value: 'starry', label: '星空色', icon: '✨' },
+      { value: 'candy', label: '糖果色', icon: '🍬' },
+      { value: 'dreamy', label: '梦幻色', icon: '🦄' },
+      { value: 'forest', label: '森林绿', icon: '🌿' },
+      { value: 'beach', label: '沙滩金', icon: '🏖️' }
+    ]
+  }
+]
+
+// 教育目标
+export const EDUCATIONAL_FOCUS: GroupedOptions[] = [
+  {
+    group: '认知发展',
+    options: [
+      { value: 'math', label: '数学启蒙' },
+      { value: 'color', label: '颜色认知' },
+      { value: 'shape', label: '形状认知' },
+      { value: 'time', label: '时间概念' },
+      { value: 'space', label: '空间感知' },
+      { value: 'cause_effect', label: '因果关系' },
+      { value: 'classify', label: '分类归纳' },
+      { value: 'logic', label: '逻辑思维' },
+      { value: 'problem_solving', label: '问题解决' }
+    ]
+  },
+  {
+    group: '语言发展',
+    options: [
+      { value: 'language', label: '语言表达' },
+      { value: 'vocabulary', label: '词汇积累' },
+      { value: 'pinyin', label: '拼音学习' },
+      { value: 'english', label: '英语启蒙' },
+      { value: 'reading', label: '阅读兴趣' },
+      { value: 'story', label: '故事理解' }
+    ]
+  },
+  {
+    group: '社会情感',
+    options: [
+      { value: 'emotion', label: '情绪管理' },
+      { value: 'social', label: '社交技能' },
+      { value: 'sharing', label: '分享合作' },
+      { value: 'empathy', label: '同理心' },
+      { value: 'confidence', label: '自信心' },
+      { value: 'manners', label: '礼仪礼貌' },
+      { value: 'safety', label: '安全意识' }
+    ]
+  },
+  {
+    group: '身体运动',
+    options: [
+      { value: 'coordination', label: '肢体协调' },
+      { value: 'fine_motor', label: '精细动作' },
+      { value: 'gross_motor', label: '大肌肉运动' },
+      { value: 'rhythm', label: '节奏感' },
+      { value: 'balance', label: '平衡能力' }
+    ]
+  },
+  {
+    group: '生活习惯',
+    options: [
+      { value: 'eating', label: '饮食习惯' },
+      { value: 'hygiene', label: '卫生习惯' },
+      { value: 'sleep', label: '作息习惯' },
+      { value: 'tidy', label: '整理习惯' },
+      { value: 'self_care', label: '自理能力' }
+    ]
+  },
+  {
+    group: '艺术审美',
+    options: [
+      { value: 'music', label: '音乐欣赏' },
+      { value: 'art', label: '艺术感知' },
+      { value: 'creativity', label: '创造力' },
+      { value: 'imagination', label: '想象力' },
+      { value: 'aesthetic', label: '审美能力' }
+    ]
+  },
+  {
+    group: '自然科学',
+    options: [
+      { value: 'animals', label: '动物认知' },
+      { value: 'plants', label: '植物认知' },
+      { value: 'weather', label: '天气自然' },
+      { value: 'environment', label: '环保意识' },
+      { value: 'science', label: '科学探索' }
+    ]
+  }
+]
+```
+
+**Step 9: 添加 Suno 进阶控制和智能联动**
+
+```typescript
+// ============================================
+// 高级参数 - Suno 进阶控制
+// ============================================
+
+// 预设组合
+export const SUNO_PRESETS: { id: string; name: string; icon: string; style_weight: number; creativity: number; description: string }[] = [
+  { id: 'safe', name: '安全稳定', icon: '🛡️', style_weight: 0.8, creativity: 0.2, description: '追求可控结果' },
+  { id: 'balanced', name: '平衡推荐', icon: '⚖️', style_weight: 0.5, creativity: 0.5, description: '通用默认选择' },
+  { id: 'explore', name: '大胆探索', icon: '🚀', style_weight: 0.3, creativity: 0.8, description: '期待惊喜创意' },
+  { id: 'precise', name: '精准复刻', icon: '🎯', style_weight: 0.95, creativity: 0.1, description: '严格按描述生成' }
+]
+
+// 常用排除项
+export const COMMON_NEGATIVE_TAGS: OptionItem[] = [
+  { value: 'heavy_metal', label: '不要重金属' },
+  { value: 'death_metal', label: '不要死亡金属' },
+  { value: 'hardcore_rap', label: '不要硬核说唱' },
+  { value: 'horror', label: '不要恐怖氛围' },
+  { value: 'distortion', label: '不要电音失真' },
+  { value: 'screaming', label: '不要嘶吼人声' }
+]
+
+// ============================================
+// 智能联动规则
+// ============================================
+
+// 氛围 → 参数联动
+export const MOOD_LINKAGE: Record<string, Partial<NurseryRhymeFullParams>> = {
+  cheerful: {
+    tempo: 130,
+    energy_level: 7,
+    music_genre: ['pop', 'dance'],
+    vocal_emotion: 'happy',
+    instruments: ['xylophone', 'tambourine']
+  },
+  gentle: {
+    tempo: 80,
+    energy_level: 3,
+    music_genre: ['folk', 'classical'],
+    vocal_emotion: 'tender',
+    instruments: ['piano', 'guitar']
+  },
+  playful: {
+    tempo: 110,
+    energy_level: 6,
+    music_genre: ['children'],
+    vocal_type: 'child',
+    instruments: ['ukulele', 'xylophone']
+  },
+  lullaby: {
+    tempo: 70,
+    energy_level: 1,
+    music_genre: ['lullaby'],
+    vocal_emotion: 'gentle',
+    instruments: ['piano', 'harp', 'music_box']
+  },
+  energetic: {
+    tempo: 145,
+    energy_level: 9,
+    music_genre: ['electronic', 'dance'],
+    instruments: ['synth', 'drums']
+  },
+  mysterious: {
+    tempo: 100,
+    energy_level: 5,
+    music_genre: ['new_age', 'cinematic'],
+    vocal_emotion: 'dreamy',
+    sound_effects: ['magic', 'fairy']
+  },
+  inspiring: {
+    tempo: 110,
+    energy_level: 7,
+    music_genre: ['pop'],
+    vocal_type: 'chorus',
+    instruments: ['strings', 'piano']
+  },
+  relaxed: {
+    tempo: 90,
+    energy_level: 4,
+    music_genre: ['bossa_nova', 'acoustic'],
+    vocal_emotion: 'calm',
+    instruments: ['guitar', 'harmonica']
+  }
+}
+
+// 流派 → 乐器联动
+export const GENRE_INSTRUMENT_LINKAGE: Record<string, string[]> = {
+  children: ['xylophone', 'tambourine', 'ukulele', 'toy_piano'],
+  classical: ['piano', 'violin', 'cello', 'flute'],
+  jazz: ['saxophone', 'piano', 'bass', 'drums'],
+  electronic: ['synth', 'drum_machine', '808'],
+  folk: ['guitar', 'harmonica', 'bongo'],
+  chinese_traditional: ['guzheng', 'dizi', 'erhu', 'pipa'],
+  rock: ['electric_guitar', 'bass', 'drums']
+}
+
+// 人声 → 情感/技巧联动
+export const VOCAL_LINKAGE: Record<string, { emotion: string; techniques: string[] }> = {
+  soft_female: { emotion: 'tender', techniques: ['clear'] },
+  warm_male: { emotion: 'calm', techniques: ['clear'] },
+  child: { emotion: 'happy', techniques: ['clear', 'hum'] },
+  chorus: { emotion: 'happy', techniques: ['harmony'] },
+  duet: { emotion: 'tender', techniques: ['clear'] }
+}
+
+// ============================================
+// 灵感关键词推荐
+// ============================================
+
+export const INSPIRATION_KEYWORDS: GroupedOptions[] = [
+  {
+    group: '主题词',
+    options: [
+      { value: 'dream', label: '梦想' },
+      { value: 'friendship', label: '友谊' },
+      { value: 'courage', label: '勇气' },
+      { value: 'growth', label: '成长' },
+      { value: 'love', label: '爱' }
+    ]
+  },
+  {
+    group: '情感词',
+    options: [
+      { value: 'happy', label: '快乐' },
+      { value: 'warm', label: '温暖' },
+      { value: 'mysterious', label: '神秘' },
+      { value: 'energetic', label: '活力' },
+      { value: 'peaceful', label: '安静' }
+    ]
+  },
+  {
+    group: '场景词',
+    options: [
+      { value: 'forest', label: '森林' },
+      { value: 'ocean', label: '海洋' },
+      { value: 'space', label: '太空' },
+      { value: 'castle', label: '城堡' },
+      { value: 'garden', label: '花园' }
+    ]
+  },
+  {
+    group: '动作词',
+    options: [
+      { value: 'dance', label: '跳舞' },
+      { value: 'run', label: '奔跑' },
+      { value: 'fly', label: '飞翔' },
+      { value: 'spin', label: '旋转' },
+      { value: 'hug', label: '拥抱' }
+    ]
+  }
+]
+
+// ============================================
+// 参数帮助说明
+// ============================================
+
+export const PARAM_HELP: Record<string, string> = {
+  music_genre: '决定歌曲的整体风格，就像选择穿什么类型的衣服',
+  tempo: '歌曲的快慢，数字越大越欢快动感，越小越安静舒缓',
+  energy_level: '歌曲的"热闹程度"，睡前选低能量，玩耍选高能量',
+  style_weight: 'Suno 有多听你的话，100%=完全按你说的，0%=它自由发挥',
+  creativity: '允许 Suno 有多少"个人发挥"，高=惊喜多，低=更稳定',
+  song_structure: '歌曲的"骨架"，决定主歌副歌怎么排列',
+  repetition_level: '歌词重复多少次，重复多=容易记住，重复少=内容丰富',
+  lyric_complexity: '歌词的难度，根据孩子年龄选择合适的复杂度'
+}
+
+// ============================================
+// 默认参数值
+// ============================================
+
+export const DEFAULT_PARAMS: Partial<NurseryRhymeFullParams> = {
+  music_mood: 'cheerful',
+  vocal_type: 'soft_female',
+  tempo: 100,
+  energy_level: 5,
+  lyric_complexity: 5,
+  repetition_level: 6,
+  duration_preference: 90,
+  style_weight: 0.5,
+  creativity: 0.5,
+  language: 'chinese'
+}
+```
+
+**Step 10: 验证配置文件并编译**
+
+```bash
+cd /Users/jack/coding/kids/miniprogram && npm run build:mp-weixin
+```
+
+**Step 11: 提交配置文件**
+
+```bash
+git add src/config/nurseryRhymeConfig.ts
+git commit -m "feat: 添加儿歌创作增强参数配置数据"
+```
+
+---
+
+## Task 2: 更新 API 类型定义
+
+**Files:**
+- Modify: `miniprogram/src/api/content.ts`
+
+**Step 1: 扩展 GenerateNurseryRhymeParams 接口**
+
+在 `GenerateNurseryRhymeParams` 接口中添加新参数：
+
+```typescript
+// 在 content.ts 中找到 GenerateNurseryRhymeParams 接口并扩展
+
+export interface GenerateNurseryRhymeParams {
+  // 必填参数
+  child_name: string
+  age_months: number
+
+  // 主题参数
+  theme_topic: string
+  theme_category: string
+  educational_focus?: string[]
+
+  // 创作模式
+  creation_mode?: 'preset' | 'smart'
+  custom_prompt?: string
+  inspiration_keywords?: string[]
+
+  // 音乐风格
+  music_mood?: string
+  music_genre?: string[]
+  tempo?: number
+  energy_level?: number
+
+  // 人声演唱
+  vocal_type?: string
+  vocal_range?: string
+  vocal_emotion?: string
+  vocal_style?: string[]
+  vocal_effects?: string[]
+  vocal_regional?: string
+
+  // 乐器与音效
+  instruments?: string[]
+  sound_effects?: string[]
+
+  // 歌词设置
+  lyric_complexity?: number
+  repetition_level?: number
+
+  // 歌曲结构
+  song_structure?: string
+  duration_preference?: number
+  action_types?: string[]
+
+  // 语言文化
+  language?: string
+  cultural_style?: string
+
+  // 个性化
+  favorite_characters?: string[]
+  favorite_animals?: string[]
+  favorite_colors?: string[]
+
+  // Suno 进阶
+  style_weight?: number
+  creativity?: number
+  negative_tags?: string
+  style_description?: string
+  seed?: number
+
+  // 兼容旧参数
+  music_style?: MusicStyle
+  art_style?: ArtStyle
+  protagonist?: ProtagonistConfig
+  color_palette?: ColorPalette
+}
+```
+
+**Step 2: 编译验证**
+
+```bash
+cd /Users/jack/coding/kids/miniprogram && npm run build:mp-weixin
+```
+
+**Step 3: 提交**
+
+```bash
+git add src/api/content.ts
+git commit -m "feat: 扩展儿歌生成 API 参数类型"
+```
+
+---
+
+## Task 3: 创建高级设置组件
+
+**Files:**
+- Create: `miniprogram/src/components/NurseryRhymeAdvanced/NurseryRhymeAdvanced.vue`
+
+由于代码量较大，此任务将创建一个可复用的高级设置组件，包含 9 个折叠面板。
+
+（此任务包含完整组件代码，约 800 行，因文档长度限制，实施时逐步编写）
+
+---
+
+## Task 4: 修改儿歌创作页面
+
+**Files:**
+- Modify: `miniprogram/src/pages/create/nursery-rhyme.vue`
+
+主要修改：
+1. 添加场景预设快捷入口
+2. 扩展核心参数区域（音乐氛围、人声类型）
+3. 集成高级设置组件
+4. 实现智能联动逻辑
+5. 更新生成请求参数
+
+---
+
+## Task 5: 编译测试
+
+**Step 1: 开发模式编译**
+```bash
+cd /Users/jack/coding/kids/miniprogram && npm run dev:mp-weixin
+```
+
+**Step 2: 生产模式编译**
+```bash
+npm run build:mp-weixin
+```
+
+**Step 3: 微信开发者工具测试**
+- 导入 `dist/dev/mp-weixin` 目录
+- 测试场景预设功能
+- 测试核心参数选择
+- 测试高级设置面板
+- 测试智能联动
+- 测试生成流程
+
+---
+
+## Task 6: 提交完整功能
+
+```bash
+git add .
+git commit -m "feat: 儿歌创作增强参数完整实现
+
+- 16 个场景预设快捷入口
+- 8 种音乐氛围 + 6 种人声类型
+- 9 个高级设置折叠面板
+- 智能联动推荐
+- 通俗帮助说明"
+```
+
+---
+
+## 执行检查清单
+
+- [ ] Task 1: 创建参数配置数据文件
+- [ ] Task 2: 更新 API 类型定义
+- [ ] Task 3: 创建高级设置组件
+- [ ] Task 4: 修改儿歌创作页面
+- [ ] Task 5: 编译测试
+- [ ] Task 6: 提交完整功能

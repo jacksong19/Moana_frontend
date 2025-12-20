@@ -232,21 +232,71 @@ export interface StyleOptions {
 // 儿歌音乐风格（兼容旧版）
 export type MusicStyle = MusicMood
 
-// 生成儿歌参数
+// 生成儿歌参数（V2 增强版，支持 31 个参数）
 export interface GenerateNurseryRhymeParams {
+  // === 必填参数 ===
   child_name: string
   age_months: number
+
+  // === 主题参数 ===
   theme_topic: string
   theme_category: string
+  educational_focus?: string[]           // 教育目标数组
+
+  // === 创作模式 ===
+  creation_mode?: CreationMode           // 'preset'（预设模式）或 'smart'（智能模式）
+  custom_prompt?: string                 // 智能模式下的自由创作描述
+  inspiration_keywords?: string[]        // 灵感关键词
+
+  // === 音乐风格 ===
+  music_mood?: string                    // 音乐氛围：cheerful/gentle/playful/lullaby/energetic/mysterious/inspiring/relaxed
+  music_genre?: string[]                 // 音乐流派（支持多选）
+  tempo?: number                         // 节奏速度 (60-180 BPM)
+  energy_level?: number                  // 能量强度 (1-10)
+
+  // === 人声演唱 ===
+  vocal_type?: string                    // 人声类型：soft_female/warm_male/child/chorus/duet/instrumental
+  vocal_range?: string                   // 音域：high/mid/low
+  vocal_emotion?: string                 // 情感表达：happy/tender/playful/calm/dreamy/passionate/gentle/mysterious
+  vocal_style?: string[]                 // 演唱技巧（支持多选）
+  vocal_effects?: string[]               // 声音效果（支持多选）
+  vocal_regional?: string                // 地域特色：american/british/japanese/korean/chinese/latin
+
+  // === 乐器与音效 ===
+  instruments?: string[]                 // 乐器偏好（支持多选）
+  sound_effects?: string[]               // 音效元素（支持多选）
+
+  // === 歌词设置 ===
+  lyric_complexity?: number              // 歌词复杂度 (1-10)
+  repetition_level?: number              // 重复程度 (1-10)
+
+  // === 歌曲结构 ===
+  song_structure?: string                // 歌曲结构：simple/standard/full/chorus_only/progressive/narrative/call_response/rap/aaba/custom
+  duration_preference?: number           // 时长偏好（秒）
+  has_actions?: boolean                  // 是否包含动作指引
+  action_types?: string[]                // 动作类型（支持多选）
+
+  // === 语言文化 ===
+  language?: string                      // 歌曲语言
+  cultural_style?: string                // 文化风格
+
+  // === 个性化 ===
+  favorite_characters?: string[]         // 喜欢的角色
+  favorite_animals?: string[]            // 喜欢的动物
+  favorite_colors?: string[]             // 喜欢的颜色
+
+  // === Suno 高级控制 ===
+  style_weight?: number                  // 风格引导权重 (0-1)
+  creativity?: number                    // 创意程度 (0-1)
+  negative_tags?: string                 // 排除的风格标签
+  style_description?: string             // 自定义风格描述
+  seed?: number                          // 随机种子（复现结果）
+
+  // === 兼容旧参数 ===
   music_style?: MusicStyle
-  // 新增风格参数
-  music_mood?: MusicMood
   art_style?: ArtStyle
   protagonist?: ProtagonistConfig
   color_palette?: ColorPalette
-  // 智能创作参数
-  creation_mode?: CreationMode      // 创作模式：smart=智能创作, preset=预设主题
-  custom_prompt?: string            // 用户自定义描述（creation_mode='smart' 时必填）
 }
 
 // 歌词段落接口
