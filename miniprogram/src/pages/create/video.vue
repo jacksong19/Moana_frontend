@@ -1148,7 +1148,7 @@ async function handleGenerate() {
       },
       child_name: child.name,
       theme_topic: selectedBook.value.theme_topic || '',
-      theme_category: 'habit',
+      theme_category: selectedBook.value.theme_category || 'habit',
       // 基础视频配置
       aspect_ratio: selectedAspectRatio.value,
       resolution: selectedResolution.value,

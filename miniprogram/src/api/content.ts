@@ -44,6 +44,7 @@ export interface PictureBook {
   id: string
   title: string
   theme_topic: string
+  theme_category?: string  // 主题分类（后端返回时可能包含）
   educational_goal: string
   pages: PictureBookPage[]
   total_duration: number
@@ -823,6 +824,156 @@ export interface TTSVoicesResponse {
 export async function getTTSVoices(): Promise<TTSVoicesResponse> {
   console.log('[getTTSVoices] 获取音色列表')
   return request.get<TTSVoicesResponse>('/content/tts/voices', {
+    showLoading: false,
+    showError: false,
+    timeout: 10000
+  })
+}
+
+// ========== 素材参数和生成日志 ==========
+
+// 生成模型信息
+export interface GeneratedByInfo {
+  story_model: string       // 故事生成模型
+  image_model: string       // 图片生成模型
+  tts_model: string         // TTS 模型
+}
+
+// 用户输入信息
+export interface UserInputsInfo {
+  child_name: string
+  age_months: number | null
+  favorite_characters: string[]
+  voice_id: string | null
+  creation_mode: 'preset' | 'smart'
+  custom_prompt: string | null
+  theme_category: string
+  theme_topic: string
+}
+
+// 增强参数
+export interface EnhancementParams {
+  story_enhancement: {
+    narrative_pace?: string | null
+    interaction_density?: string | null
+    educational_focus?: string | null
+    language_style?: string | null
+    plot_complexity?: string | null
+    ending_style?: string | null
+  } | null
+  visual_enhancement: {
+    time_atmosphere?: string | null
+    scene_environment?: string | null
+    emotional_tone?: string | null
+    composition_style?: string | null
+    lighting_effect?: string | null
+  } | null
+}
+
+// 主角信息
+export interface ProtagonistInfo {
+  animal: string
+  color: string
+  accessory: string
+}
+
+// 图片生成配置（通用参数）
+export interface ImageGenerationConfig {
+  model: string
+  style: string
+  width: number
+  height: number
+  protagonist: ProtagonistInfo
+  color_palette: string
+}
+
+// 音频生成配置（通用参数）
+export interface AudioGenerationConfig {
+  model: string
+  voice_id: string
+}
+
+// 生成配置（存储通用参数，避免每个素材重复）
+export interface GenerationConfig {
+  image: ImageGenerationConfig
+  audio: AudioGenerationConfig
+}
+
+// 图片素材（精简版，通用参数在 generation_config 中）
+export interface ImageAsset {
+  type: 'image'
+  page_num: number
+  url: string
+  prompt: string
+}
+
+// 音频素材（精简版，通用参数在 generation_config 中）
+export interface AudioAsset {
+  type: 'audio'
+  page_num: number
+  url: string
+  text: string
+  duration: number
+}
+
+// 素材类型
+export type AssetDetail = ImageAsset | AudioAsset
+
+// 素材参数响应
+export interface AssetDetailsResponse {
+  content_id: string
+  content_type: 'picture_book' | 'nursery_rhyme' | 'video'
+  generated_by: GeneratedByInfo
+  user_inputs: UserInputsInfo
+  enhancement_params: EnhancementParams
+  generation_config: GenerationConfig  // 新增：通用生成配置
+  assets: AssetDetail[]
+  total_count: number
+}
+
+/**
+ * 获取内容素材参数详情
+ * 查看图片 prompt、模型参数等
+ */
+export async function getAssetDetails(contentId: string): Promise<AssetDetailsResponse> {
+  console.log('[getAssetDetails] 获取素材参数:', contentId)
+  return request.get<AssetDetailsResponse>(`/content/${contentId}/asset-details`, {
+    showLoading: false,
+    showError: false,
+    timeout: 10000
+  })
+}
+
+// 生成日志条目
+export interface GenerationLogEntry {
+  timestamp?: string
+  level?: 'info' | 'warning' | 'error'
+  stage?: string             // 生成阶段: story, image, audio, video 等
+  message?: string
+  details?: Record<string, any>
+  duration_ms?: number      // 该步骤耗时
+}
+
+// 生成日志响应（匹配后端实际返回格式）
+export interface GenerationLogsResponse {
+  content_id: string
+  content_type?: 'picture_book' | 'nursery_rhyme' | 'video'
+  title?: string
+  created_at?: string
+  total_duration_ms?: number
+  status?: 'completed' | 'failed'
+  logs: GenerationLogEntry[]
+  total_count: number
+  error?: string
+}
+
+/**
+ * 获取内容生成日志
+ * 用于排查生成过程中的问题
+ */
+export async function getGenerationLogs(contentId: string): Promise<GenerationLogsResponse> {
+  console.log('[getGenerationLogs] 获取生成日志:', contentId)
+  return request.get<GenerationLogsResponse>(`/content/${contentId}/generation-logs`, {
     showLoading: false,
     showError: false,
     timeout: 10000

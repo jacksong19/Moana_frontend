@@ -48,24 +48,27 @@
 
       <!-- 步骤 1: 选择主题 -->
       <view v-if="currentStep === 0" class="step-content animate-fadeIn">
+        <!-- 标题区域 -->
         <text class="step-title">选择儿歌主题</text>
-        <text class="step-desc">为 {{ childName }} 选择一个适合的主题</text>
+        <text class="step-desc">为 {{ childName }} 谱写一首动听旋律</text>
 
-        <!-- 主题分类 Tab -->
-        <view class="theme-tabs">
-          <view
-            v-for="cat in themeCategories"
-            :key="cat.id"
-            class="tab-item"
-            :class="{ active: selectedCategory === cat.id }"
-            @tap="selectedCategory = cat.id"
-          >
-            <text class="tab-icon">{{ cat.icon }}</text>
-            <text class="tab-name">{{ cat.name }}</text>
+        <!-- 主题分类 - 紧凑横向滚动 -->
+        <scroll-view class="category-scroll" scroll-x enhanced :show-scrollbar="false">
+          <view class="category-track">
+            <view
+              v-for="cat in themeCategories"
+              :key="cat.id"
+              class="category-chip"
+              :class="{ active: selectedCategory === cat.id }"
+              @tap="selectedCategory = cat.id"
+            >
+              <text class="chip-icon">{{ cat.icon }}</text>
+              <text class="chip-name">{{ cat.name }}</text>
+            </view>
           </view>
-        </view>
+        </scroll-view>
 
-        <!-- 主题列表 -->
+        <!-- 主题卡片网格 - 紧凑3列 -->
         <view class="theme-grid">
           <view
             v-for="theme in filteredThemes"
@@ -74,13 +77,9 @@
             :class="{ selected: selectedTheme?.id === theme.id }"
             @tap="selectTheme(theme)"
           >
-            <view class="theme-icon">
-              <text>{{ getThemeIcon(theme.id) }}</text>
-            </view>
+            <text class="theme-emoji">{{ getThemeIcon(theme.id) }}</text>
             <text class="theme-name">{{ theme.name }}</text>
-            <view v-if="selectedTheme?.id === theme.id" class="theme-check">
-              <text>✓</text>
-            </view>
+            <view v-if="selectedTheme?.id === theme.id" class="theme-check">✓</view>
           </view>
         </view>
       </view>
@@ -261,10 +260,14 @@ const steps = [
 ]
 const currentStep = ref(0)
 
-// 主题分类（与 API 返回的分类保持一致）
+// 主题分类（丰富的儿歌主题分类）
 const themeCategories = [
   { id: 'habit', name: '习惯养成', icon: '🌟' },
-  { id: 'cognition', name: '认知世界', icon: '🌍' }
+  { id: 'cognition', name: '认知启蒙', icon: '🌍' },
+  { id: 'action', name: '律动游戏', icon: '🎵' },
+  { id: 'scene', name: '日常场景', icon: '🏠' },
+  { id: 'nature', name: '自然世界', icon: '🌸' },
+  { id: 'festival', name: '节日歌曲', icon: '🎉' }
 ]
 const selectedCategory = ref('habit')
 const selectedTheme = ref<ThemeItem | null>(null)
@@ -324,18 +327,15 @@ const stageInfo: Record<string, { minProgress: number; maxProgress: number; mess
 const childName = computed(() => childStore.currentChild?.name || '宝贝')
 
 const filteredThemes = computed(() => {
-  const apiThemes = contentStore.themes?.[selectedCategory.value]?.themes || []
-  const fallbackThemes = defaultThemes[selectedCategory.value] || []
-
-  // 优先使用 API 主题，但如果为空则使用默认主题
-  let themes = apiThemes.length > 0 ? apiThemes : fallbackThemes
+  // 始终使用本地 defaultThemes（更丰富的主题库）
+  let themes = defaultThemes[selectedCategory.value] || []
 
   // 如果当前选中的主题不在列表中，将其添加进去（确保预选主题始终可见）
   if (selectedTheme.value && selectedTheme.value.id) {
     const exists = themes.some(t => t.id === selectedTheme.value!.id)
     if (!exists) {
       // 从默认主题中查找并添加
-      const fromDefault = fallbackThemes.find(t => t.id === selectedTheme.value!.id)
+      const fromDefault = themes.find(t => t.id === selectedTheme.value!.id)
       if (fromDefault) {
         themes = [fromDefault, ...themes]
       }
@@ -343,6 +343,11 @@ const filteredThemes = computed(() => {
   }
 
   return themes
+})
+
+const currentCategoryName = computed(() => {
+  const cat = themeCategories.find(c => c.id === selectedCategory.value)
+  return cat?.name || ''
 })
 
 const currentStyleName = computed(() => {
@@ -359,85 +364,284 @@ const canNext = computed(() => {
   return true
 })
 
-// 默认主题（API 未返回时使用）
-// 使用与 API 一致的主题 ID 和分类结构
+// 默认主题（丰富的儿歌主题库）
 const defaultThemes: Record<string, ThemeItem[]> = {
+  // 习惯养成（20个主题）
   habit: [
-    { id: 'brush_teeth', name: '刷牙', subcategory: '生活习惯', age_range: [24, 48], keywords: [] },
-    { id: 'wash_hands', name: '洗手', subcategory: '卫生习惯', age_range: [18, 48], keywords: [] },
-    { id: 'get_dressed', name: '穿衣', subcategory: '生活习惯', age_range: [24, 48], keywords: [] },
-    { id: 'potty_training', name: '如厕', subcategory: '生活习惯', age_range: [18, 36], keywords: [] },
-    { id: 'eat_independently', name: '自己吃饭', subcategory: '生活习惯', age_range: [18, 48], keywords: [] },
-    { id: 'no_picky_eating', name: '不挑食', subcategory: '饮食习惯', age_range: [24, 60], keywords: [] },
-    { id: 'bedtime', name: '按时睡觉', subcategory: '作息习惯', age_range: [24, 60], keywords: [] },
-    { id: 'nap_time', name: '午睡', subcategory: '作息习惯', age_range: [18, 48], keywords: [] },
-    { id: 'sharing', name: '分享', subcategory: '社交习惯', age_range: [24, 60], keywords: [] },
-    { id: 'greeting', name: '打招呼', subcategory: '礼仪习惯', age_range: [18, 48], keywords: [] },
-    { id: 'tidy_up', name: '收拾玩具', subcategory: '生活习惯', age_range: [30, 60], keywords: [] }
+    { id: 'brush_teeth', name: '刷牙歌', subcategory: '卫生习惯', age_range: [24, 48], keywords: [] },
+    { id: 'wash_hands', name: '洗手歌', subcategory: '卫生习惯', age_range: [18, 48], keywords: [] },
+    { id: 'take_bath', name: '洗澡歌', subcategory: '卫生习惯', age_range: [18, 48], keywords: [] },
+    { id: 'wash_face', name: '洗脸歌', subcategory: '卫生习惯', age_range: [18, 36], keywords: [] },
+    { id: 'cut_nails', name: '剪指甲', subcategory: '卫生习惯', age_range: [24, 48], keywords: [] },
+    { id: 'get_dressed', name: '穿衣歌', subcategory: '生活自理', age_range: [24, 48], keywords: [] },
+    { id: 'tie_shoes', name: '系鞋带', subcategory: '生活自理', age_range: [48, 72], keywords: [] },
+    { id: 'potty_song', name: '上厕所', subcategory: '生活自理', age_range: [18, 36], keywords: [] },
+    { id: 'eat_well', name: '吃饭歌', subcategory: '饮食习惯', age_range: [18, 48], keywords: [] },
+    { id: 'no_picky', name: '不挑食', subcategory: '饮食习惯', age_range: [24, 60], keywords: [] },
+    { id: 'drink_water', name: '多喝水', subcategory: '健康习惯', age_range: [18, 48], keywords: [] },
+    { id: 'chew_slowly', name: '细嚼慢咽', subcategory: '饮食习惯', age_range: [24, 60], keywords: [] },
+    { id: 'sleep_song', name: '睡觉歌', subcategory: '作息习惯', age_range: [18, 48], keywords: [] },
+    { id: 'wake_up', name: '起床歌', subcategory: '作息习惯', age_range: [18, 48], keywords: [] },
+    { id: 'nap_song', name: '午睡歌', subcategory: '作息习惯', age_range: [18, 48], keywords: [] },
+    { id: 'tidy_up', name: '收拾歌', subcategory: '整理习惯', age_range: [24, 60], keywords: [] },
+    { id: 'clean_room', name: '整理房间', subcategory: '整理习惯', age_range: [36, 72], keywords: [] },
+    { id: 'polite_song', name: '礼貌歌', subcategory: '礼仪习惯', age_range: [18, 48], keywords: [] },
+    { id: 'share_song', name: '分享歌', subcategory: '社交习惯', age_range: [24, 60], keywords: [] },
+    { id: 'exercise_song', name: '运动歌', subcategory: '健康习惯', age_range: [24, 60], keywords: [] }
   ],
+  // 认知启蒙（20个主题）
   cognition: [
-    { id: 'colors', name: '颜色', subcategory: '基础认知', age_range: [12, 36], keywords: [] },
-    { id: 'shapes', name: '形状', subcategory: '基础认知', age_range: [18, 36], keywords: [] },
-    { id: 'numbers', name: '数字', subcategory: '数学启蒙', age_range: [24, 48], keywords: [] },
-    { id: 'big_small', name: '大小', subcategory: '基础认知', age_range: [12, 36], keywords: [] },
-    { id: 'animals', name: '动物', subcategory: '自然认知', age_range: [12, 48], keywords: [] },
-    { id: 'plants', name: '植物', subcategory: '自然认知', age_range: [18, 48], keywords: [] },
-    { id: 'weather', name: '天气', subcategory: '自然认知', age_range: [24, 48], keywords: [] },
-    { id: 'family', name: '家庭成员', subcategory: '社会认知', age_range: [12, 36], keywords: [] },
-    { id: 'occupations', name: '职业', subcategory: '社会认知', age_range: [30, 60], keywords: [] },
-    { id: 'vehicles', name: '交通工具', subcategory: '生活认知', age_range: [18, 48], keywords: [] },
-    // 情绪主题（API 将其归类在 cognition 下）
-    { id: 'happy', name: '开心', subcategory: '情绪认知', age_range: [18, 48], keywords: [] },
-    { id: 'sad', name: '难过', subcategory: '情绪认知', age_range: [24, 48], keywords: [] },
-    { id: 'angry', name: '生气', subcategory: '情绪管理', age_range: [24, 60], keywords: [] },
-    { id: 'scared', name: '害怕', subcategory: '情绪管理', age_range: [24, 60], keywords: [] }
+    { id: 'numbers', name: '数字歌', subcategory: '数学启蒙', age_range: [24, 48], keywords: [] },
+    { id: 'counting', name: '数数歌', subcategory: '数学启蒙', age_range: [18, 48], keywords: [] },
+    { id: 'add_subtract', name: '加减歌', subcategory: '数学启蒙', age_range: [48, 72], keywords: [] },
+    { id: 'letters', name: '字母歌', subcategory: '语言启蒙', age_range: [30, 60], keywords: [] },
+    { id: 'pinyin', name: '拼音歌', subcategory: '语言启蒙', age_range: [48, 72], keywords: [] },
+    { id: 'colors', name: '颜色歌', subcategory: '基础认知', age_range: [12, 36], keywords: [] },
+    { id: 'shapes', name: '形状歌', subcategory: '基础认知', age_range: [18, 36], keywords: [] },
+    { id: 'big_small', name: '大小歌', subcategory: '对比认知', age_range: [12, 36], keywords: [] },
+    { id: 'long_short', name: '长短歌', subcategory: '对比认知', age_range: [18, 36], keywords: [] },
+    { id: 'body_parts', name: '身体歌', subcategory: '自我认知', age_range: [12, 36], keywords: [] },
+    { id: 'five_senses', name: '五官歌', subcategory: '自我认知', age_range: [12, 36], keywords: [] },
+    { id: 'opposites', name: '反义词', subcategory: '语言启蒙', age_range: [24, 48], keywords: [] },
+    { id: 'animals', name: '动物歌', subcategory: '自然认知', age_range: [12, 48], keywords: [] },
+    { id: 'animal_sounds', name: '动物叫', subcategory: '自然认知', age_range: [12, 36], keywords: [] },
+    { id: 'fruits', name: '水果歌', subcategory: '生活认知', age_range: [12, 36], keywords: [] },
+    { id: 'vegetables', name: '蔬菜歌', subcategory: '生活认知', age_range: [18, 48], keywords: [] },
+    { id: 'vehicles', name: '交通歌', subcategory: '生活认知', age_range: [18, 48], keywords: [] },
+    { id: 'occupations', name: '职业歌', subcategory: '社会认知', age_range: [30, 60], keywords: [] },
+    { id: 'family', name: '家人歌', subcategory: '社会认知', age_range: [12, 36], keywords: [] },
+    { id: 'time_song', name: '时间歌', subcategory: '基础认知', age_range: [42, 72], keywords: [] }
+  ],
+  // 律动游戏（20个主题）
+  action: [
+    { id: 'clap_hands', name: '拍手歌', subcategory: '手部律动', age_range: [12, 36], keywords: [] },
+    { id: 'finger_play', name: '手指歌', subcategory: '手部律动', age_range: [12, 48], keywords: [] },
+    { id: 'finger_family', name: '手指家族', subcategory: '手部律动', age_range: [12, 36], keywords: [] },
+    { id: 'fist_song', name: '握拳歌', subcategory: '手部律动', age_range: [12, 36], keywords: [] },
+    { id: 'dance_song', name: '跳舞歌', subcategory: '全身律动', age_range: [24, 60], keywords: [] },
+    { id: 'march_song', name: '踏步歌', subcategory: '全身律动', age_range: [18, 48], keywords: [] },
+    { id: 'jump_song', name: '跳跳歌', subcategory: '全身律动', age_range: [24, 60], keywords: [] },
+    { id: 'stretch_song', name: '伸展歌', subcategory: '全身律动', age_range: [18, 48], keywords: [] },
+    { id: 'spin_song', name: '转圈歌', subcategory: '全身律动', age_range: [24, 48], keywords: [] },
+    { id: 'squat_song', name: '蹲起歌', subcategory: '全身律动', age_range: [24, 60], keywords: [] },
+    { id: 'shake_song', name: '摇摇歌', subcategory: '全身律动', age_range: [12, 36], keywords: [] },
+    { id: 'hide_seek', name: '捉迷藏', subcategory: '互动游戏', age_range: [24, 60], keywords: [] },
+    { id: 'follow_me', name: '跟我做', subcategory: '互动游戏', age_range: [18, 48], keywords: [] },
+    { id: 'pass_ball', name: '传球歌', subcategory: '互动游戏', age_range: [24, 60], keywords: [] },
+    { id: 'action_song', name: '动作歌', subcategory: '动作模仿', age_range: [18, 48], keywords: [] },
+    { id: 'animal_move', name: '动物操', subcategory: '动作模仿', age_range: [24, 60], keywords: [] },
+    { id: 'robot_dance', name: '机器人舞', subcategory: '动作模仿', age_range: [30, 60], keywords: [] },
+    { id: 'rhythm_game', name: '节奏歌', subcategory: '节奏感', age_range: [24, 60], keywords: [] },
+    { id: 'drum_song', name: '打鼓歌', subcategory: '节奏感', age_range: [18, 48], keywords: [] },
+    { id: 'freeze_dance', name: '定格舞', subcategory: '互动游戏', age_range: [30, 60], keywords: [] }
+  ],
+  // 日常场景（20个主题）
+  scene: [
+    { id: 'morning_song', name: '早安歌', subcategory: '一天时光', age_range: [18, 48], keywords: [] },
+    { id: 'goodnight', name: '晚安歌', subcategory: '一天时光', age_range: [12, 48], keywords: [] },
+    { id: 'lullaby', name: '摇篮曲', subcategory: '睡前歌曲', age_range: [0, 36], keywords: [] },
+    { id: 'sweet_dreams', name: '甜梦歌', subcategory: '睡前歌曲', age_range: [0, 36], keywords: [] },
+    { id: 'car_ride', name: '坐车歌', subcategory: '出行场景', age_range: [18, 48], keywords: [] },
+    { id: 'bus_song', name: '坐公交', subcategory: '出行场景', age_range: [24, 60], keywords: [] },
+    { id: 'train_ride', name: '坐火车', subcategory: '出行场景', age_range: [24, 60], keywords: [] },
+    { id: 'playground', name: '游乐场', subcategory: '游玩场景', age_range: [24, 60], keywords: [] },
+    { id: 'zoo_trip', name: '动物园', subcategory: '游玩场景', age_range: [24, 60], keywords: [] },
+    { id: 'aquarium', name: '水族馆', subcategory: '游玩场景', age_range: [24, 60], keywords: [] },
+    { id: 'supermarket', name: '超市歌', subcategory: '生活场景', age_range: [24, 60], keywords: [] },
+    { id: 'hospital', name: '看医生', subcategory: '生活场景', age_range: [24, 60], keywords: [] },
+    { id: 'haircut', name: '理发歌', subcategory: '生活场景', age_range: [24, 60], keywords: [] },
+    { id: 'school_song', name: '上学歌', subcategory: '校园生活', age_range: [30, 72], keywords: [] },
+    { id: 'homework', name: '做作业', subcategory: '校园生活', age_range: [48, 72], keywords: [] },
+    { id: 'recess', name: '课间歌', subcategory: '校园生活', age_range: [36, 72], keywords: [] },
+    { id: 'picnic', name: '野餐歌', subcategory: '户外活动', age_range: [24, 60], keywords: [] },
+    { id: 'beach_song', name: '海边歌', subcategory: '户外活动', age_range: [24, 60], keywords: [] },
+    { id: 'park_song', name: '公园歌', subcategory: '户外活动', age_range: [18, 48], keywords: [] },
+    { id: 'camping', name: '露营歌', subcategory: '户外活动', age_range: [30, 72], keywords: [] }
+  ],
+  // 自然世界（20个主题）
+  nature: [
+    { id: 'sun_song', name: '太阳歌', subcategory: '天体', age_range: [18, 48], keywords: [] },
+    { id: 'moon_song', name: '月亮歌', subcategory: '天体', age_range: [18, 48], keywords: [] },
+    { id: 'star_song', name: '星星歌', subcategory: '天体', age_range: [18, 48], keywords: [] },
+    { id: 'earth_song', name: '地球歌', subcategory: '天体', age_range: [30, 60], keywords: [] },
+    { id: 'rain_song', name: '下雨歌', subcategory: '天气', age_range: [18, 48], keywords: [] },
+    { id: 'rainbow', name: '彩虹歌', subcategory: '天气', age_range: [24, 60], keywords: [] },
+    { id: 'wind_song', name: '风儿歌', subcategory: '天气', age_range: [24, 60], keywords: [] },
+    { id: 'cloud_song', name: '云朵歌', subcategory: '天气', age_range: [18, 48], keywords: [] },
+    { id: 'snow_song', name: '下雪歌', subcategory: '天气', age_range: [24, 60], keywords: [] },
+    { id: 'thunder', name: '打雷歌', subcategory: '天气', age_range: [24, 60], keywords: [] },
+    { id: 'spring_song', name: '春天歌', subcategory: '四季', age_range: [24, 60], keywords: [] },
+    { id: 'summer_song', name: '夏天歌', subcategory: '四季', age_range: [24, 60], keywords: [] },
+    { id: 'autumn_song', name: '秋天歌', subcategory: '四季', age_range: [24, 60], keywords: [] },
+    { id: 'winter_song', name: '冬天歌', subcategory: '四季', age_range: [24, 60], keywords: [] },
+    { id: 'flower_song', name: '花儿歌', subcategory: '植物', age_range: [18, 48], keywords: [] },
+    { id: 'tree_song', name: '大树歌', subcategory: '植物', age_range: [18, 48], keywords: [] },
+    { id: 'grass_song', name: '小草歌', subcategory: '植物', age_range: [18, 48], keywords: [] },
+    { id: 'butterfly', name: '蝴蝶歌', subcategory: '昆虫', age_range: [18, 48], keywords: [] },
+    { id: 'bee_song', name: '小蜜蜂', subcategory: '昆虫', age_range: [18, 48], keywords: [] },
+    { id: 'bird_song', name: '小鸟歌', subcategory: '动物', age_range: [12, 48], keywords: [] }
+  ],
+  // 节日歌曲（20个主题）
+  festival: [
+    { id: 'birthday_song', name: '生日歌', subcategory: '特殊日子', age_range: [12, 72], keywords: [] },
+    { id: 'happy_birthday', name: '祝你生日', subcategory: '特殊日子', age_range: [12, 72], keywords: [] },
+    { id: 'new_year_song', name: '新年歌', subcategory: '中国节日', age_range: [18, 72], keywords: [] },
+    { id: 'spring_fest', name: '过年歌', subcategory: '中国节日', age_range: [18, 72], keywords: [] },
+    { id: 'red_envelope', name: '红包歌', subcategory: '中国节日', age_range: [18, 72], keywords: [] },
+    { id: 'lantern_song', name: '元宵歌', subcategory: '中国节日', age_range: [24, 72], keywords: [] },
+    { id: 'dragon_boat', name: '端午歌', subcategory: '中国节日', age_range: [24, 72], keywords: [] },
+    { id: 'moon_fest', name: '中秋歌', subcategory: '中国节日', age_range: [24, 72], keywords: [] },
+    { id: 'qingming', name: '清明歌', subcategory: '中国节日', age_range: [36, 72], keywords: [] },
+    { id: 'double_ninth', name: '重阳歌', subcategory: '中国节日', age_range: [36, 72], keywords: [] },
+    { id: 'childrens_day', name: '儿童节', subcategory: '特殊节日', age_range: [24, 72], keywords: [] },
+    { id: 'teachers_day', name: '教师节', subcategory: '感恩节日', age_range: [36, 72], keywords: [] },
+    { id: 'mothers_song', name: '母亲节', subcategory: '感恩节日', age_range: [24, 72], keywords: [] },
+    { id: 'fathers_song', name: '父亲节', subcategory: '感恩节日', age_range: [24, 72], keywords: [] },
+    { id: 'grandparents', name: '爷爷奶奶', subcategory: '感恩节日', age_range: [24, 72], keywords: [] },
+    { id: 'christmas', name: '圣诞歌', subcategory: '西方节日', age_range: [24, 72], keywords: [] },
+    { id: 'halloween', name: '万圣节', subcategory: '西方节日', age_range: [36, 72], keywords: [] },
+    { id: 'easter', name: '复活节', subcategory: '西方节日', age_range: [30, 72], keywords: [] },
+    { id: 'thank_song', name: '感恩歌', subcategory: '感恩节日', age_range: [24, 72], keywords: [] },
+    { id: 'graduation', name: '毕业歌', subcategory: '特殊日子', age_range: [48, 72], keywords: [] }
   ]
 }
 
-// 主题图标映射（覆盖 API 返回的所有主题 ID）
+// 主题图标映射（覆盖所有主题 ID）
 const themeIcons: Record<string, string> = {
-  // ===== 习惯养成 (API 返回的 ID) =====
-  brush_teeth: '🦷',         // 刷牙
-  wash_hands: '🧼',          // 洗手
-  get_dressed: '👕',         // 穿衣
-  potty_training: '🚽',      // 如厕
-  eat_independently: '🥄',   // 自己吃饭
-  no_picky_eating: '🥦',     // 不挑食
-  bedtime: '🌙',             // 按时睡觉
-  nap_time: '😴',            // 午睡
-  sharing: '🤝',             // 分享
-  greeting: '👋',            // 打招呼
-  tidy_up: '🧹',             // 收拾玩具
-  // ===== 认知世界 (API 返回的 ID) =====
-  colors: '🌈',              // 颜色
-  shapes: '🔷',              // 形状
-  numbers: '🔢',             // 数字
-  big_small: '📏',           // 大小
-  animals: '🐼',             // 动物
-  plants: '🌱',              // 植物
-  weather: '☀️',              // 天气
-  family: '👨‍👩‍👧',              // 家庭成员
-  occupations: '👷',         // 职业
-  vehicles: '🚌',            // 交通工具
-  // ===== 情绪 (API 返回的 ID) =====
-  happy: '😄',               // 开心
-  sad: '😢',                 // 难过
-  angry: '😤',               // 生气
-  scared: '😰',              // 害怕
-  // ===== 本地备用 ID（兼容旧数据）=====
-  brushing_teeth: '🦷',
-  washing_hands: '🧼',
-  eating_vegetables: '🥦',
-  sleeping_early: '🌙',
-  tidying_up: '🧹',
-  polite_words: '🙏',
-  seasons: '🌸',
-  body_parts: '👃',
-  making_friends: '👫',
-  managing_anger: '😊',
-  courage: '🦸',
-  love_family: '👨‍👩‍👧',
-  helping_others: '🤝'
+  // ===== 习惯养成 =====
+  brush_teeth: '🦷',
+  wash_hands: '🧼',
+  take_bath: '🛁',
+  wash_face: '🧴',
+  cut_nails: '💅',
+  get_dressed: '👕',
+  tie_shoes: '👟',
+  potty_song: '🚽',
+  eat_well: '🍽️',
+  no_picky: '🥦',
+  drink_water: '💧',
+  chew_slowly: '🍴',
+  sleep_song: '😴',
+  wake_up: '🌅',
+  nap_song: '💤',
+  tidy_up: '🧹',
+  clean_room: '🏠',
+  polite_song: '💬',
+  share_song: '🤝',
+  exercise_song: '🏃',
+  // ===== 认知启蒙 =====
+  numbers: '🔢',
+  counting: '🧮',
+  add_subtract: '➕',
+  letters: '🔤',
+  pinyin: '📝',
+  colors: '🎨',
+  shapes: '🔷',
+  big_small: '📏',
+  long_short: '📐',
+  body_parts: '🖐️',
+  five_senses: '👁️',
+  opposites: '↔️',
+  animals: '🦁',
+  animal_sounds: '🐕',
+  fruits: '🍎',
+  vegetables: '🥬',
+  vehicles: '🚗',
+  occupations: '👨‍⚕️',
+  family: '👨‍👩‍👧',
+  time_song: '🕐',
+  // ===== 律动游戏 =====
+  clap_hands: '👏',
+  finger_play: '🖐️',
+  finger_family: '✋',
+  fist_song: '✊',
+  dance_song: '💃',
+  march_song: '🚶',
+  jump_song: '🦘',
+  stretch_song: '🙆',
+  spin_song: '🔄',
+  squat_song: '🧎',
+  shake_song: '🙌',
+  hide_seek: '🙈',
+  follow_me: '👀',
+  pass_ball: '⚽',
+  action_song: '🎬',
+  animal_move: '🐻',
+  robot_dance: '🤖',
+  rhythm_game: '🥁',
+  drum_song: '🪘',
+  freeze_dance: '🧊',
+  // ===== 日常场景 =====
+  morning_song: '☀️',
+  goodnight: '🌙',
+  lullaby: '🍼',
+  sweet_dreams: '💫',
+  car_ride: '🚗',
+  bus_song: '🚌',
+  train_ride: '🚂',
+  playground: '🎢',
+  zoo_trip: '🦒',
+  aquarium: '🐠',
+  supermarket: '🛒',
+  hospital: '🏥',
+  haircut: '💇',
+  school_song: '🎒',
+  homework: '📚',
+  recess: '🎮',
+  picnic: '🧺',
+  beach_song: '🏖️',
+  park_song: '🌳',
+  camping: '⛺',
+  // ===== 自然世界 =====
+  sun_song: '☀️',
+  moon_song: '🌙',
+  star_song: '⭐',
+  earth_song: '🌍',
+  rain_song: '🌧️',
+  rainbow: '🌈',
+  wind_song: '💨',
+  cloud_song: '☁️',
+  snow_song: '❄️',
+  thunder: '⚡',
+  spring_song: '🌸',
+  summer_song: '🌻',
+  autumn_song: '🍂',
+  winter_song: '🧣',
+  flower_song: '🌷',
+  tree_song: '🌳',
+  grass_song: '🌿',
+  butterfly: '🦋',
+  bee_song: '🐝',
+  bird_song: '🐦',
+  // ===== 节日歌曲 =====
+  birthday_song: '🎂',
+  happy_birthday: '🎁',
+  new_year_song: '🎆',
+  spring_fest: '🧧',
+  red_envelope: '🧧',
+  lantern_song: '🏮',
+  dragon_boat: '🐲',
+  moon_fest: '🥮',
+  qingming: '🌾',
+  double_ninth: '🏔️',
+  childrens_day: '🎈',
+  teachers_day: '📖',
+  mothers_song: '💐',
+  fathers_song: '👔',
+  grandparents: '👴',
+  christmas: '🎄',
+  halloween: '🎃',
+  easter: '🐰',
+  thank_song: '🙏',
+  graduation: '🎓',
+  // ===== 兼容旧 ID =====
+  potty_training: '🚽',
+  eat_independently: '🥄',
+  no_picky_eating: '🥦',
+  bedtime: '🛏️',
+  nap_time: '😴',
+  sharing: '🤝',
+  greeting: '👋'
 }
 
 function getThemeIcon(id: string): string {
@@ -805,9 +1009,6 @@ onMounted(() => {
   const sysInfo = uni.getSystemInfoSync()
   statusBarHeight.value = sysInfo.statusBarHeight || 20
   navHeight.value = statusBarHeight.value + 44
-
-  // 加载主题
-  contentStore.fetchThemes()
 })
 
 // 处理传入的参数
@@ -1069,51 +1270,68 @@ onLoad((options) => {
   margin-bottom: $spacing-lg;
 }
 
-// 主题 Tab
-.theme-tabs {
-  display: flex;
-  gap: $spacing-sm;
+// ========================================
+// 主题选择区域 - 紧凑版
+// ========================================
+
+// 分类横向滚动
+.category-scroll {
+  width: calc(100% + 64rpx);
+  margin-left: -32rpx;
   margin-bottom: $spacing-md;
 }
 
-.tab-item {
-  flex: 1;
+.category-track {
   display: flex;
-  flex-direction: column;
+  gap: $spacing-sm;
+  padding: 0 32rpx;
+  padding-right: 64rpx; // 额外右侧间距，防止最后一项截断
+  white-space: nowrap;
+}
+
+.category-chip {
+  display: inline-flex;
   align-items: center;
-  padding: $spacing-sm;
+  gap: 8rpx;
+  padding: 16rpx 24rpx;
   background: $bg-card;
-  border-radius: $radius-md;
+  border-radius: $radius-full;
   border: 2rpx solid $border-light;
-  box-shadow: $shadow-sm;
   transition: all $duration-fast;
+  flex-shrink: 0;
 
   &.active {
+    background: rgba($song-primary, 0.1);
     border-color: $song-primary;
-    background: rgba($song-primary, 0.08);
-    box-shadow: $shadow-colored-song;
+    box-shadow: 0 2rpx 12rpx rgba($song-primary, 0.15);
+
+    .chip-name {
+      color: $song-primary;
+      font-weight: $font-semibold;
+    }
+  }
+
+  &:active {
+    transform: scale(0.96);
   }
 }
 
-.tab-icon {
-  font-size: 36rpx;
-  margin-bottom: 4rpx;
+.chip-icon {
+  font-size: 32rpx;
 }
 
-.tab-name {
+.chip-name {
   font-size: $font-sm;
   color: $text-secondary;
-
-  .active & { color: $song-primary; font-weight: $font-medium; }
+  transition: all $duration-fast;
 }
 
-// 主题网格
+// 主题卡片网格 - 紧凑3列
 .theme-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: $spacing-sm;
   width: 100%;
-  box-sizing: border-box;
 }
 
 .theme-card {
@@ -1121,7 +1339,7 @@ onLoad((options) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: $spacing-md $spacing-sm;
+  padding: $spacing-md $spacing-xs;
   background: $bg-card;
   border-radius: $radius-md;
   border: 2rpx solid $border-light;
@@ -1130,8 +1348,17 @@ onLoad((options) => {
 
   &.selected {
     border-color: $song-primary;
-    background: rgba($song-primary, 0.08);
-    box-shadow: $shadow-colored-song;
+    background: rgba($song-primary, 0.06);
+    box-shadow: 0 4rpx 16rpx rgba($song-primary, 0.15);
+
+    .theme-emoji {
+      transform: scale(1.1);
+    }
+
+    .theme-name {
+      color: $song-primary;
+      font-weight: $font-semibold;
+    }
   }
 
   &:active {
@@ -1139,33 +1366,33 @@ onLoad((options) => {
   }
 }
 
-.theme-icon {
-  font-size: 48rpx;
-  margin-bottom: $spacing-xs;
+.theme-emoji {
+  font-size: 40rpx;
+  margin-bottom: 8rpx;
+  transition: transform $duration-fast;
 }
 
 .theme-name {
   font-size: $font-sm;
   color: $text-primary;
   text-align: center;
+  line-height: 1.3;
 }
 
 .theme-check {
   position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  width: 32rpx;
-  height: 32rpx;
+  top: 6rpx;
+  right: 6rpx;
+  width: 28rpx;
+  height: 28rpx;
   background: $song-primary;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  text {
-    font-size: 18rpx;
-    color: $text-white;
-  }
+  font-size: 16rpx;
+  color: $text-white;
+  font-weight: $font-bold;
 }
 
 // ==========================================

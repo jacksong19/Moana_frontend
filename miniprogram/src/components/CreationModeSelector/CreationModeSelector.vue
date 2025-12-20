@@ -163,18 +163,81 @@ const title = computed(() => contentTypeConfig.value.title)
 const contentTypeEmoji = computed(() => contentTypeConfig.value.emoji)
 const contentTypeClass = computed(() => contentTypeConfig.value.class)
 
-// 灵感标签
-const inspirationTags = [
-  { emoji: '🦷', label: '刷牙习惯', text: '宝宝不爱刷牙，做一个有趣的刷牙故事' },
-  { emoji: '🥦', label: '爱吃蔬菜', text: '宝宝挑食不吃蔬菜，帮我做一个关于蔬菜的内容' },
-  { emoji: '🛏️', label: '早睡早起', text: '宝宝晚上不愿意睡觉，需要一个睡前故事' },
-  { emoji: '🚿', label: '洗澡洗手', text: '教宝宝养成爱干净的好习惯' },
-  { emoji: '💬', label: '礼貌用语', text: '教宝宝说请、谢谢、对不起等礼貌用语' },
-  { emoji: '🖐️', label: '学会分享', text: '宝宝不愿意和小朋友分享玩具' },
-  { emoji: '👭', label: '交朋友', text: '帮助宝宝学会和其他小朋友交朋友' },
-  { emoji: '😌', label: '情绪管理', text: '宝宝容易发脾气，教他管理情绪' },
-  { emoji: '🏠', label: '认识家人', text: '教宝宝认识家庭成员和亲情关系' }
-]
+// 根据内容类型区分的灵感标签
+const inspirationTagsConfig: Record<ContentType, Array<{ emoji: string; label: string; text: string }>> = {
+  // 绘本：故事类型导向（20条）
+  picture_book: [
+    { emoji: '🏰', label: '童话冒险', text: '创作一个充满魔法的童话冒险故事' },
+    { emoji: '🔍', label: '悬疑探险', text: '创作一个小侦探破解谜题的探险故事' },
+    { emoji: '🌈', label: '奇幻世界', text: '创作一个发生在奇幻王国的神奇故事' },
+    { emoji: '💕', label: '温馨日常', text: '创作一个温暖治愈的家庭日常故事' },
+    { emoji: '🦸', label: '英雄成长', text: '创作一个小英雄克服困难、勇敢成长的故事' },
+    { emoji: '🌲', label: '森林奇遇', text: '创作一个在神秘森林中发生的奇遇故事' },
+    { emoji: '🚀', label: '太空探索', text: '创作一个探索宇宙星球的科幻冒险故事' },
+    { emoji: '🐾', label: '动物伙伴', text: '创作一个可爱动物们之间的友谊故事' },
+    { emoji: '🎪', label: '欢乐派对', text: '创作一个充满惊喜和欢笑的派对故事' },
+    { emoji: '🌊', label: '海底世界', text: '创作一个探索神秘海底王国的冒险故事' },
+    { emoji: '🦄', label: '梦境奇缘', text: '创作一个发生在梦境中的奇妙故事' },
+    { emoji: '🎭', label: '寓言故事', text: '创作一个蕴含人生道理的寓言故事' },
+    { emoji: '🏝️', label: '荒岛求生', text: '创作一个在神秘小岛上的冒险故事' },
+    { emoji: '🎨', label: '创意想象', text: '创作一个天马行空的想象故事' },
+    { emoji: '🦁', label: '动物王国', text: '创作一个动物王国里的精彩故事' },
+    { emoji: '🧙', label: '魔法学院', text: '创作一个在魔法学校学习的故事' },
+    { emoji: '🌸', label: '四季变换', text: '创作一个关于春夏秋冬四季的故事' },
+    { emoji: '🎠', label: '游乐园', text: '创作一个在神奇游乐园的冒险故事' },
+    { emoji: '🌟', label: '追逐梦想', text: '创作一个追逐梦想、永不放弃的故事' },
+    { emoji: '🤝', label: '友谊万岁', text: '创作一个关于真挚友谊的感人故事' }
+  ],
+  // 儿歌：功能性 + 场景结合（20条）
+  nursery_rhyme: [
+    { emoji: '🔢', label: '数字启蒙', text: '编一首教宝宝认识数字的儿歌' },
+    { emoji: '🔤', label: '字母学习', text: '编一首朗朗上口的字母学习歌' },
+    { emoji: '🎵', label: '律动舞蹈', text: '编一首可以跟着跳舞的律动儿歌' },
+    { emoji: '😴', label: '摇篮曲', text: '编一首温柔舒缓的哄睡摇篮曲' },
+    { emoji: '🌅', label: '早安歌', text: '编一首元气满满的起床早安歌' },
+    { emoji: '🍽️', label: '吃饭歌', text: '编一首让宝宝爱上吃饭的儿歌' },
+    { emoji: '🚗', label: '出行歌', text: '编一首出门坐车时唱的欢乐儿歌' },
+    { emoji: '🛁', label: '洗澡歌', text: '编一首让洗澡变有趣的儿歌' },
+    { emoji: '🌙', label: '晚安歌', text: '编一首甜蜜温馨的睡前晚安歌' },
+    { emoji: '🎂', label: '生日歌', text: '编一首专属宝宝的生日祝福歌' },
+    { emoji: '🦷', label: '刷牙歌', text: '编一首让宝宝爱上刷牙的儿歌' },
+    { emoji: '🌈', label: '颜色歌', text: '编一首教宝宝认识颜色的儿歌' },
+    { emoji: '🐻', label: '动物歌', text: '编一首认识各种小动物的儿歌' },
+    { emoji: '🍎', label: '水果歌', text: '编一首认识各种水果的儿歌' },
+    { emoji: '👋', label: '礼貌歌', text: '编一首教宝宝讲礼貌的儿歌' },
+    { emoji: '🏃', label: '运动歌', text: '编一首鼓励宝宝爱运动的儿歌' },
+    { emoji: '🧹', label: '收拾歌', text: '编一首教宝宝收拾玩具的儿歌' },
+    { emoji: '👨‍👩‍👧', label: '家人歌', text: '编一首认识家庭成员的儿歌' },
+    { emoji: '🌞', label: '天气歌', text: '编一首认识天气变化的儿歌' },
+    { emoji: '🎄', label: '节日歌', text: '编一首庆祝节日的欢乐儿歌' }
+  ],
+  // 视频：特殊时刻/纪念（20条）
+  video: [
+    { emoji: '🎂', label: '生日祝福', text: '制作一个生日快乐祝福视频' },
+    { emoji: '🎄', label: '节日庆典', text: '制作一个节日主题的庆祝视频' },
+    { emoji: '📸', label: '成长纪念', text: '制作一个记录宝宝成长瞬间的视频' },
+    { emoji: '🏆', label: '荣誉时刻', text: '制作一个表彰宝宝获得荣誉的视频' },
+    { emoji: '👨‍👩‍👧', label: '全家福', text: '制作一个温馨的家庭合影视频' },
+    { emoji: '🎓', label: '毕业典礼', text: '制作一个幼儿园/学校毕业纪念视频' },
+    { emoji: '✈️', label: '旅行回忆', text: '制作一个记录美好旅途的回忆视频' },
+    { emoji: '💝', label: '感恩祝福', text: '制作一个送给亲人的感恩祝福视频' },
+    { emoji: '🌟', label: '才艺展示', text: '制作一个展示宝宝才艺的精彩视频' },
+    { emoji: '🎁', label: '惊喜礼物', text: '制作一个给家人朋友的惊喜视频' },
+    { emoji: '🏠', label: '新家乔迁', text: '制作一个庆祝搬新家的纪念视频' },
+    { emoji: '👶', label: '满月百天', text: '制作一个宝宝满月或百天的纪念视频' },
+    { emoji: '🎀', label: '周岁庆典', text: '制作一个宝宝周岁生日的纪念视频' },
+    { emoji: '🏫', label: '开学典礼', text: '制作一个开学第一天的纪念视频' },
+    { emoji: '🎹', label: '演出纪念', text: '制作一个记录表演演出的精彩视频' },
+    { emoji: '⚽', label: '运动会', text: '制作一个运动会精彩瞬间的视频' },
+    { emoji: '🌺', label: '母亲节', text: '制作一个送给妈妈的母亲节视频' },
+    { emoji: '👔', label: '父亲节', text: '制作一个送给爸爸的父亲节视频' },
+    { emoji: '👴', label: '敬老节', text: '制作一个送给爷爷奶奶的祝福视频' },
+    { emoji: '📅', label: '年度回顾', text: '制作一个回顾一年精彩时刻的视频' }
+  ]
+}
+
+// 根据当前内容类型获取对应的灵感标签
+const inspirationTags = computed(() => inspirationTagsConfig[props.contentType])
 
 const canStart = computed(() => {
   if (!selectedMode.value) return false
