@@ -1,185 +1,244 @@
 <template>
   <view class="page-container">
-    <!-- 装饰背景 -->
-    <view class="decor-bg">
-      <view class="decor-shape shape-1"></view>
-      <view class="decor-shape shape-2"></view>
-      <view class="decor-shape shape-3"></view>
+    <!-- 梦幻背景 -->
+    <view class="magic-bg">
+      <view class="magic-aurora a1"></view>
+      <view class="magic-aurora a2"></view>
+      <view class="magic-aurora a3"></view>
+      <view class="magic-stars">
+        <view class="star s1">✦</view>
+        <view class="star s2">✧</view>
+        <view class="star s3">⋆</view>
+        <view class="star s4">✦</view>
+        <view class="star s5">✧</view>
+      </view>
     </view>
 
     <!-- 主内容区 -->
     <scroll-view class="main-scroll" scroll-y enhanced :show-scrollbar="false">
-      <!-- 顶部返回按钮区 -->
-      <view class="top-bar">
-        <view class="back-btn" @tap="goBack">
-          <text>←</text>
+      <!-- 顶部导航区 -->
+      <view class="nav-section">
+        <view class="nav-back" @tap="goBack">
+          <text class="back-icon">←</text>
         </view>
       </view>
 
-      <!-- 页面标题区 -->
+      <!-- 页面头部 - 全新设计 -->
       <view class="header-section">
-        <view class="header-badge">
-          <text class="badge-icon">✨</text>
-          <text class="badge-text">创作工坊</text>
+        <view class="header-magic-ring">
+          <view class="ring-glow"></view>
+          <view class="ring-icon">
+            <text>✨</text>
+          </view>
         </view>
-        <text class="header-title">魔法创作中心</text>
-        <text class="header-desc">为 {{ childName }} 创造独一无二的内容</text>
+        <view class="header-content">
+          <view class="header-badge">
+            <text class="badge-dot"></text>
+            <text class="badge-label">创作工坊</text>
+          </view>
+          <text class="header-title">魔法创作中心</text>
+          <text class="header-subtitle">为 {{ childName }} 创造独一无二的内容</text>
+        </view>
       </view>
 
-      <!-- 三大创作入口 -->
-      <view class="creation-cards">
-        <!-- 绘本卡片 -->
-        <view class="creation-card card-book" @tap="goToPictureBook">
-          <view class="card-bg-pattern"></view>
-          <view class="card-glow-effect"></view>
+      <!-- 创作卡片区 - 全新沉浸式设计 -->
+      <view class="creation-gallery">
+        <!-- 绘本卡片 - 主推大卡片 -->
+        <view class="gallery-card card-book" @tap="goToPictureBook">
+          <view class="card-shine"></view>
+          <view class="card-pattern">
+            <view class="pattern-circle pc1"></view>
+            <view class="pattern-circle pc2"></view>
+            <view class="pattern-circle pc3"></view>
+          </view>
           <view class="card-content">
-            <view class="card-badge">
-              <text>推荐</text>
+            <view class="card-header">
+              <view class="card-badge badge-hot">
+                <text class="badge-star">★</text>
+                <text class="badge-text">推荐</text>
+              </view>
             </view>
-            <view class="card-icon-container">
-              <view class="icon-ring ring-1"></view>
-              <view class="icon-ring ring-2"></view>
-              <view class="card-main-icon">📚</view>
+            <view class="card-visual">
+              <view class="visual-rings">
+                <view class="v-ring vr1"></view>
+                <view class="v-ring vr2"></view>
+                <view class="v-ring vr3"></view>
+              </view>
+              <view class="visual-icon">
+                <text>📚</text>
+              </view>
+              <view class="visual-particles">
+                <view class="particle p1">✦</view>
+                <view class="particle p2">✧</view>
+                <view class="particle p3">⋆</view>
+              </view>
             </view>
             <view class="card-info">
               <text class="card-title">AI 绘本</text>
-              <text class="card-subtitle">个性化故事，独特插画</text>
-              <text class="card-detail">让宝贝成为故事主角</text>
-            </view>
-            <view class="card-action">
-              <view class="action-circle">
-                <text>→</text>
+              <text class="card-desc">个性化故事，独特插画</text>
+              <view class="card-features">
+                <view class="feature">
+                  <text class="feature-icon">🎨</text>
+                  <text class="feature-text">多种画风</text>
+                </view>
+                <view class="feature">
+                  <text class="feature-icon">👶</text>
+                  <text class="feature-text">宝贝主角</text>
+                </view>
+                <view class="feature">
+                  <text class="feature-icon">🎯</text>
+                  <text class="feature-text">教育主题</text>
+                </view>
               </view>
             </view>
-          </view>
-          <view class="card-decoration">
-            <view class="deco-star d1">✦</view>
-            <view class="deco-star d2">✧</view>
-            <view class="deco-star d3">✦</view>
+            <view class="card-action">
+              <view class="action-btn">
+                <text class="action-text">开始创作</text>
+                <view class="action-arrow">
+                  <text>→</text>
+                </view>
+              </view>
+            </view>
           </view>
         </view>
 
-        <!-- 儿歌卡片 -->
-        <view class="creation-card card-song" @tap="goToNurseryRhyme">
-          <view class="card-bg-pattern"></view>
-          <view class="card-glow-effect"></view>
-          <view class="card-content">
-            <view class="card-badge badge-new">
-              <text>New</text>
-            </view>
-            <view class="card-icon-container">
-              <view class="icon-ring ring-1"></view>
-              <view class="icon-ring ring-2"></view>
-              <view class="card-main-icon">🎵</view>
-              <view class="music-notes">
-                <text class="note n1">♪</text>
-                <text class="note n2">♫</text>
+        <!-- 儿歌和视频卡片 - 双列布局 -->
+        <view class="gallery-row">
+          <!-- 儿歌卡片 -->
+          <view class="gallery-card-sm card-song" @tap="goToNurseryRhyme">
+            <view class="card-shine"></view>
+            <view class="sm-content">
+              <view class="sm-badge">
+                <text>New</text>
               </view>
-            </view>
-            <view class="card-info">
-              <text class="card-title">AI 儿歌</text>
-              <text class="card-subtitle">原创旋律，专属歌词</text>
-              <text class="card-detail">唱出宝贝的故事</text>
-            </view>
-            <view class="card-action">
-              <view class="action-circle">
-                <text>→</text>
+              <view class="sm-visual">
+                <view class="sm-icon">
+                  <text>🎵</text>
+                </view>
+                <view class="sm-waves">
+                  <view class="wave w1"></view>
+                  <view class="wave w2"></view>
+                  <view class="wave w3"></view>
+                  <view class="wave w4"></view>
+                </view>
+              </view>
+              <view class="sm-info">
+                <text class="sm-title">AI 儿歌</text>
+                <text class="sm-desc">原创旋律，专属歌词</text>
+                <text class="sm-detail">唱出宝贝的故事</text>
+              </view>
+              <view class="sm-action">
+                <view class="sm-arrow">
+                  <text>→</text>
+                </view>
               </view>
             </view>
           </view>
-          <view class="card-decoration">
-            <view class="deco-star d1">✦</view>
-            <view class="deco-star d2">✧</view>
-            <view class="deco-star d3">✦</view>
-          </view>
-        </view>
 
-        <!-- 视频卡片 -->
-        <view class="creation-card card-video" @tap="goToVideo">
-          <view class="card-bg-pattern"></view>
-          <view class="card-glow-effect"></view>
-          <view class="card-content">
-            <view class="card-badge badge-new">
-              <text>New</text>
-            </view>
-            <view class="card-icon-container">
-              <view class="icon-ring ring-1"></view>
-              <view class="icon-ring ring-2"></view>
-              <view class="card-main-icon">🎬</view>
-            </view>
-            <view class="card-info">
-              <text class="card-title">AI 视频</text>
-              <text class="card-subtitle">绘本动态化</text>
-              <text class="card-detail">让静态故事动起来</text>
-            </view>
-            <view class="card-action">
-              <view class="action-circle">
-                <text>→</text>
+          <!-- 视频卡片 -->
+          <view class="gallery-card-sm card-video" @tap="goToVideo">
+            <view class="card-shine"></view>
+            <view class="sm-content">
+              <view class="sm-badge">
+                <text>New</text>
+              </view>
+              <view class="sm-visual">
+                <view class="sm-icon">
+                  <text>🎬</text>
+                </view>
+                <view class="sm-play">
+                  <view class="play-ring"></view>
+                  <text class="play-icon">▶</text>
+                </view>
+              </view>
+              <view class="sm-info">
+                <text class="sm-title">AI 视频</text>
+                <text class="sm-desc">绘本动态化</text>
+                <text class="sm-detail">让故事动起来</text>
+              </view>
+              <view class="sm-action">
+                <view class="sm-arrow">
+                  <text>→</text>
+                </view>
               </view>
             </view>
-          </view>
-          <view class="card-decoration">
-            <view class="deco-star d1">✦</view>
-            <view class="deco-star d2">✧</view>
-            <view class="deco-star d3">✦</view>
           </view>
         </view>
       </view>
 
-      <!-- 智能创作区 -->
-      <view class="ai-creation-section">
-        <view class="ai-header">
-          <view class="ai-icon-wrap">
-            <view class="ai-pulse"></view>
-            <text class="ai-icon">🔮</text>
+      <!-- 智能创作区 - 全新设计 -->
+      <view class="smart-section">
+        <view class="smart-header">
+          <view class="smart-icon-area">
+            <view class="smart-glow"></view>
+            <view class="smart-ring"></view>
+            <view class="smart-icon">
+              <text>🔮</text>
+            </view>
           </view>
-          <view class="ai-title-wrap">
-            <text class="ai-title">智能创作</text>
-            <text class="ai-subtitle">告诉 AI 你的需求，自动匹配最佳创作方式</text>
+          <view class="smart-title-area">
+            <text class="smart-title">智能创作</text>
+            <text class="smart-subtitle">描述你的需求，AI 自动匹配最佳创作方式</text>
           </view>
         </view>
 
-        <view class="ai-input-area">
-          <view class="input-glow"></view>
-          <view class="input-container">
+        <view class="smart-input-card">
+          <view class="input-card-glow"></view>
+          <view class="input-wrapper">
+            <view class="input-decor">
+              <text class="decor-icon">💭</text>
+            </view>
             <textarea
               v-model="aiInput"
-              class="ai-input"
+              class="smart-textarea"
               placeholder="例如：宝宝最近不爱吃蔬菜，帮我做一个关于吃蔬菜的绘本"
               :maxlength="200"
               auto-height
             />
-            <view class="input-footer">
-              <text class="char-count">{{ aiInput.length }}/200</text>
+            <view class="input-counter">
+              <text>{{ aiInput.length }}/200</text>
             </view>
           </view>
 
-          <!-- 快捷提示 -->
-          <view class="quick-tips">
-            <view class="tip-item" @tap="fillTip('宝宝不爱刷牙，需要一个刷牙主题的绘本')">
-              <text class="tip-emoji">🦷</text>
-              <text class="tip-text">刷牙习惯</text>
+          <!-- 快捷灵感标签 -->
+          <view class="inspiration-tags">
+            <view class="tags-label">
+              <text class="label-icon">💡</text>
+              <text class="label-text">快捷灵感</text>
             </view>
-            <view class="tip-item" @tap="fillTip('做一首认识小动物的儿歌')">
-              <text class="tip-emoji">🐰</text>
-              <text class="tip-text">认识动物</text>
-            </view>
-            <view class="tip-item" @tap="fillTip('宝宝不愿意和小朋友分享玩具')">
-              <text class="tip-emoji">🎁</text>
-              <text class="tip-text">学会分享</text>
+            <view class="tags-list">
+              <view class="tag-item" @tap="fillTip('宝宝不爱刷牙，需要一个刷牙主题的绘本')">
+                <text class="tag-emoji">🦷</text>
+                <text class="tag-text">刷牙习惯</text>
+              </view>
+              <view class="tag-item" @tap="fillTip('做一首认识小动物的儿歌')">
+                <text class="tag-emoji">🐰</text>
+                <text class="tag-text">认识动物</text>
+              </view>
+              <view class="tag-item" @tap="fillTip('宝宝不愿意和小朋友分享玩具')">
+                <text class="tag-emoji">🎁</text>
+                <text class="tag-text">学会分享</text>
+              </view>
             </view>
           </view>
 
           <!-- 提交按钮 -->
           <view
-            class="ai-submit-btn"
+            class="submit-btn"
             :class="{ disabled: !aiInput.trim() }"
             @tap="handleAICreate"
           >
-            <view class="btn-shine"></view>
+            <view class="btn-bg">
+              <view class="btn-shimmer"></view>
+            </view>
             <view class="btn-content">
-              <text class="btn-icon">✨</text>
+              <view class="btn-icon-wrap">
+                <text class="btn-icon">✨</text>
+              </view>
               <text class="btn-text">开始魔法创作</text>
+              <view class="btn-arrow">
+                <text>→</text>
+              </view>
             </view>
           </view>
         </view>
@@ -228,7 +287,6 @@ function fillTip(text: string) {
 
 async function handleAICreate() {
   if (!aiInput.value.trim()) return
-  // 跳转到智能创作页面，传递用户输入
   uni.navigateTo({
     url: `/pages/create/smart?input=${encodeURIComponent(aiInput.value)}`
   })
@@ -250,8 +308,10 @@ onShow(() => {
   overflow: hidden;
 }
 
-// === 装饰背景 ===
-.decor-bg {
+// ============================================
+// 梦幻背景
+// ============================================
+.magic-bg {
   position: fixed;
   top: 0;
   left: 0;
@@ -262,37 +322,76 @@ onShow(() => {
   overflow: hidden;
 }
 
-.decor-shape {
+.magic-aurora {
   position: absolute;
   border-radius: 50%;
+  filter: blur(80rpx);
   opacity: 0.5;
 
-  &.shape-1 {
-    width: 300rpx;
-    height: 300rpx;
-    background: $book-light;
-    top: -80rpx;
-    right: -60rpx;
+  &.a1 {
+    width: 450rpx;
+    height: 450rpx;
+    background: linear-gradient(135deg, $book-light 0%, rgba($book-primary, 0.4) 100%);
+    top: -100rpx;
+    right: -80rpx;
+    animation: auroraMove 10s ease-in-out infinite;
   }
 
-  &.shape-2 {
-    width: 250rpx;
-    height: 250rpx;
-    background: $song-light;
+  &.a2 {
+    width: 380rpx;
+    height: 380rpx;
+    background: linear-gradient(135deg, $song-light 0%, rgba($song-primary, 0.4) 100%);
     top: 35%;
-    left: -80rpx;
+    left: -100rpx;
+    animation: auroraMove 12s ease-in-out infinite 2s;
   }
 
-  &.shape-3 {
-    width: 200rpx;
-    height: 200rpx;
-    background: $video-light;
-    bottom: 15%;
-    right: -40rpx;
+  &.a3 {
+    width: 320rpx;
+    height: 320rpx;
+    background: linear-gradient(135deg, $video-light 0%, rgba($video-primary, 0.4) 100%);
+    bottom: 10%;
+    right: -60rpx;
+    animation: auroraMove 14s ease-in-out infinite 4s;
   }
 }
 
-// === 主滚动区 ===
+@keyframes auroraMove {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30rpx, -20rpx) scale(1.1); }
+  50% { transform: translate(-20rpx, 30rpx) scale(0.95); }
+  75% { transform: translate(15rpx, 15rpx) scale(1.05); }
+}
+
+.magic-stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.star {
+  position: absolute;
+  color: $accent;
+  opacity: 0.6;
+  animation: starFloat 4s ease-in-out infinite;
+
+  &.s1 { top: 15%; left: 20%; font-size: 24rpx; animation-delay: 0s; }
+  &.s2 { top: 25%; right: 15%; font-size: 20rpx; animation-delay: 0.8s; }
+  &.s3 { top: 45%; left: 10%; font-size: 18rpx; animation-delay: 1.6s; }
+  &.s4 { top: 60%; right: 25%; font-size: 22rpx; animation-delay: 2.4s; }
+  &.s5 { top: 80%; left: 30%; font-size: 20rpx; animation-delay: 3.2s; }
+}
+
+@keyframes starFloat {
+  0%, 100% { opacity: 0.3; transform: translateY(0) rotate(0deg); }
+  50% { opacity: 0.8; transform: translateY(-20rpx) rotate(180deg); }
+}
+
+// ============================================
+// 主滚动区
+// ============================================
 .main-scroll {
   position: relative;
   z-index: 1;
@@ -302,271 +401,576 @@ onShow(() => {
   box-sizing: border-box;
 }
 
-// === 顶部返回栏 ===
-.top-bar {
-  padding-top: calc(env(safe-area-inset-top) + 20rpx);
+// ============================================
+// 导航区
+// ============================================
+.nav-section {
+  padding-top: calc(env(safe-area-inset-top) + 24rpx);
   padding-bottom: 16rpx;
 }
 
-.back-btn {
-  width: 72rpx;
-  height: 72rpx;
+.nav-back {
+  width: 80rpx;
+  height: 80rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: $bg-card;
-  border: 1rpx solid $border-light;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-sm;
-
-  text {
-    font-size: 36rpx;
-    color: $text-secondary;
-  }
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: $radius-xl;
+  box-shadow: $shadow-md;
+  border: 1rpx solid rgba(255, 255, 255, 0.8);
 
   &:active {
     transform: scale(0.92);
-    background: $bg-soft;
+    background: rgba(255, 255, 255, 0.95);
   }
 }
 
-// === 页面标题区 ===
+.back-icon {
+  font-size: 40rpx;
+  color: $text-secondary;
+  font-weight: 300;
+}
+
+// ============================================
+// 页面头部
+// ============================================
 .header-section {
   text-align: center;
   padding: 24rpx 0 48rpx;
 }
 
+.header-magic-ring {
+  position: relative;
+  width: 100rpx;
+  height: 100rpx;
+  margin: 0 auto 24rpx;
+}
+
+.ring-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: $gradient-dreamy;
+  filter: blur(20rpx);
+  opacity: 0.6;
+  animation: ringGlow 3s ease-in-out infinite;
+}
+
+@keyframes ringGlow {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 0.4; }
+}
+
+.ring-icon {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  box-shadow: $shadow-lg;
+
+  text {
+    font-size: 48rpx;
+  }
+}
+
+.header-content {
+  position: relative;
+}
+
 .header-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 8rpx 20rpx;
-  background: rgba($accent, 0.12);
-  border: 1rpx solid rgba($accent, 0.25);
+  gap: 10rpx;
+  padding: 10rpx 24rpx;
+  background: rgba($accent, 0.1);
+  border: 1rpx solid rgba($accent, 0.2);
   border-radius: $radius-full;
   margin-bottom: 20rpx;
 }
 
-.badge-icon {
-  font-size: 24rpx;
+.badge-dot {
+  width: 12rpx;
+  height: 12rpx;
+  background: $accent;
+  border-radius: 50%;
+  animation: dotPulse 2s ease-in-out infinite;
 }
 
-.badge-text {
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+.badge-label {
   font-size: 24rpx;
   color: $accent;
-  font-weight: $font-medium;
+  font-weight: 600;
 }
 
 .header-title {
   display: block;
-  font-size: 52rpx;
-  font-weight: $font-bold;
+  font-size: 56rpx;
+  font-weight: 800;
   color: $text-primary;
-  letter-spacing: 2rpx;
+  letter-spacing: 3rpx;
   margin-bottom: 12rpx;
 }
 
-.header-desc {
+.header-subtitle {
   display: block;
   font-size: 28rpx;
   color: $text-tertiary;
 }
 
-// === 创作卡片 ===
-.creation-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 24rpx;
+// ============================================
+// 创作卡片区
+// ============================================
+.creation-gallery {
   margin-bottom: 48rpx;
 }
 
-.creation-card {
+// 主推大卡片
+.gallery-card {
   position: relative;
-  border-radius: $radius-lg;
+  border-radius: 40rpx;
   overflow: hidden;
-  transition: transform $duration-base $ease-out;
-  box-shadow: $shadow-card;
+  margin-bottom: 24rpx;
+  box-shadow: $shadow-xl;
 
   &:active {
     transform: scale(0.98);
   }
+
+  &.card-book {
+    background: linear-gradient(160deg, #FFF9F6 0%, $book-light 40%, rgba($book-primary, 0.15) 100%);
+    border: 1rpx solid rgba($book-primary, 0.1);
+
+    .card-badge { background: $book-primary; }
+    .v-ring { border-color: rgba($book-primary, 0.15); }
+    .action-btn { background: $book-gradient; box-shadow: $shadow-colored-book; }
+    .particle { color: $book-primary; }
+  }
 }
 
-.card-bg-pattern {
-  display: none;
+.card-shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: cardShine 4s ease-in-out infinite;
 }
 
-.card-glow-effect {
-  display: none;
+@keyframes cardShine {
+  0% { left: -100%; }
+  50%, 100% { left: 150%; }
 }
 
-.card-book {
-  background: $bg-card;
-  border: 1rpx solid $border-light;
-  border-left: 6rpx solid $book-primary;
-
-  .card-badge { background: $book-primary; }
-  .icon-ring { border-color: rgba($book-primary, 0.3); }
-  .action-circle { background: $book-gradient; box-shadow: $shadow-colored-book; }
+.card-pattern {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60%;
+  height: 100%;
+  pointer-events: none;
 }
 
-.card-song {
-  background: $bg-card;
-  border: 1rpx solid $border-light;
-  border-left: 6rpx solid $song-primary;
+.pattern-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba($book-primary, 0.05);
 
-  .card-badge { background: $song-primary; }
-  .icon-ring { border-color: rgba($song-primary, 0.3); }
-  .action-circle { background: $song-gradient; box-shadow: $shadow-colored-song; }
-}
+  &.pc1 {
+    width: 200rpx;
+    height: 200rpx;
+    top: -40rpx;
+    right: -40rpx;
+  }
 
-.card-video {
-  background: $bg-card;
-  border: 1rpx solid $border-light;
-  border-left: 6rpx solid $video-primary;
+  &.pc2 {
+    width: 150rpx;
+    height: 150rpx;
+    top: 50%;
+    right: 20%;
+  }
 
-  .card-badge { background: $video-primary; }
-  .icon-ring { border-color: rgba($video-primary, 0.3); }
-  .action-circle { background: $video-gradient; box-shadow: $shadow-colored-video; }
+  &.pc3 {
+    width: 100rpx;
+    height: 100rpx;
+    bottom: 20rpx;
+    right: 40%;
+  }
 }
 
 .card-content {
   position: relative;
-  z-index: 2;
+  z-index: 1;
+  padding: 40rpx;
+}
+
+.card-header {
   display: flex;
-  align-items: center;
-  padding: 32rpx;
+  justify-content: flex-end;
+  margin-bottom: 20rpx;
 }
 
 .card-badge {
-  position: absolute;
-  top: 24rpx;
-  right: 24rpx;
-  padding: 6rpx 16rpx;
-  border-radius: $radius-sm;
-
-  text {
-    font-size: 22rpx;
-    color: $text-white;
-    font-weight: $font-semibold;
-  }
-
-  &.badge-new {
-    background: $song-gradient;
-  }
-}
-
-.card-icon-container {
-  position: relative;
-  width: 100rpx;
-  height: 100rpx;
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  gap: 8rpx;
+  padding: 10rpx 20rpx;
+  border-radius: $radius-full;
+
+  .badge-star {
+    font-size: 20rpx;
+    color: #fff;
+  }
+
+  .badge-text {
+    font-size: 24rpx;
+    color: #fff;
+    font-weight: 600;
+  }
 }
 
-.icon-ring {
+.card-visual {
+  position: relative;
+  width: 140rpx;
+  height: 140rpx;
+  margin-bottom: 32rpx;
+}
+
+.visual-rings {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140rpx;
+  height: 140rpx;
+}
+
+.v-ring {
   position: absolute;
   border-radius: 50%;
   border: 2rpx solid;
 
-  &.ring-1 {
+  &.vr1 {
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    animation: ringPulse 2s ease-out infinite;
+    animation: vRingPulse 3s ease-out infinite;
   }
 
-  &.ring-2 {
-    top: -10rpx;
-    left: -10rpx;
-    right: -10rpx;
-    bottom: -10rpx;
-    opacity: 0.5;
-    animation: ringPulse 2s ease-out infinite 0.5s;
+  &.vr2 {
+    top: -15rpx;
+    left: -15rpx;
+    right: -15rpx;
+    bottom: -15rpx;
+    opacity: 0.6;
+    animation: vRingPulse 3s ease-out infinite 0.5s;
+  }
+
+  &.vr3 {
+    top: -30rpx;
+    left: -30rpx;
+    right: -30rpx;
+    bottom: -30rpx;
+    opacity: 0.3;
+    animation: vRingPulse 3s ease-out infinite 1s;
   }
 }
 
-@keyframes ringPulse {
+@keyframes vRingPulse {
   0% { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(1.3); opacity: 0; }
+  100% { transform: scale(1.4); opacity: 0; }
 }
 
-.card-main-icon {
-  position: relative;
-  z-index: 1;
-  font-size: 52rpx;
+.visual-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  text {
+    font-size: 72rpx;
+  }
 }
 
-.music-notes {
+.visual-particles {
   position: absolute;
   top: 0;
-  right: -20rpx;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
-.note {
+.particle {
   position: absolute;
   font-size: 20rpx;
-  color: $song-primary;
-  animation: noteFloat 2s ease-in-out infinite;
+  animation: particleFloat 3s ease-in-out infinite;
 
-  &.n1 {
-    top: 0;
-    right: 0;
-    animation-delay: 0s;
-  }
-
-  &.n2 {
-    top: 20rpx;
-    right: -16rpx;
-    animation-delay: 0.5s;
-  }
+  &.p1 { top: 10rpx; right: 20rpx; animation-delay: 0s; }
+  &.p2 { bottom: 20rpx; right: 0; animation-delay: 0.5s; }
+  &.p3 { top: 50%; left: -20rpx; animation-delay: 1s; }
 }
 
-@keyframes noteFloat {
-  0%, 100% { opacity: 0; transform: translateY(0) rotate(0deg); }
-  50% { opacity: 1; transform: translateY(-16rpx) rotate(15deg); }
+@keyframes particleFloat {
+  0%, 100% { opacity: 0.4; transform: translateY(0) rotate(0deg); }
+  50% { opacity: 1; transform: translateY(-15rpx) rotate(180deg); }
 }
 
 .card-info {
-  flex: 1;
-  margin-left: 24rpx;
-  padding-right: 60rpx;
+  margin-bottom: 32rpx;
 }
 
 .card-title {
   display: block;
-  font-size: $font-lg;
-  font-weight: $font-bold;
+  font-size: 52rpx;
+  font-weight: 800;
+  color: $text-primary;
+  margin-bottom: 12rpx;
+}
+
+.card-desc {
+  display: block;
+  font-size: 30rpx;
+  color: $text-secondary;
+  margin-bottom: 24rpx;
+}
+
+.card-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 20rpx;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: $radius-full;
+  border: 1rpx solid rgba($book-primary, 0.1);
+}
+
+.feature-icon {
+  font-size: 22rpx;
+}
+
+.feature-text {
+  font-size: 24rpx;
+  color: $text-secondary;
+}
+
+.card-action {
+  display: flex;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 24rpx 40rpx;
+  border-radius: $radius-2xl;
+}
+
+.action-text {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.action-arrow {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+
+  text {
+    font-size: 28rpx;
+    color: #fff;
+  }
+}
+
+// 双列卡片
+.gallery-row {
+  display: flex;
+  gap: 20rpx;
+}
+
+.gallery-card-sm {
+  flex: 1;
+  position: relative;
+  border-radius: 32rpx;
+  overflow: hidden;
+  box-shadow: $shadow-lg;
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &.card-song {
+    background: linear-gradient(160deg, #F9FFF9 0%, $song-light 50%, rgba($song-primary, 0.15) 100%);
+    border: 1rpx solid rgba($song-primary, 0.1);
+
+    .sm-badge { background: $song-primary; }
+    .wave { background: $song-primary; }
+    .sm-arrow { background: $song-gradient; box-shadow: $shadow-colored-song; }
+  }
+
+  &.card-video {
+    background: linear-gradient(160deg, #FFFEF8 0%, $video-light 50%, rgba($video-primary, 0.15) 100%);
+    border: 1rpx solid rgba($video-primary, 0.1);
+
+    .sm-badge { background: $video-primary; }
+    .play-ring { border-color: rgba($video-primary, 0.3); }
+    .play-icon { color: $video-primary; }
+    .sm-arrow { background: $video-gradient; box-shadow: $shadow-colored-video; }
+  }
+}
+
+.sm-content {
+  position: relative;
+  z-index: 1;
+  padding: 28rpx;
+}
+
+.sm-badge {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  padding: 6rpx 14rpx;
+  border-radius: $radius-full;
+
+  text {
+    font-size: 20rpx;
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+.sm-visual {
+  position: relative;
+  width: 80rpx;
+  height: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.sm-icon {
+  position: relative;
+  z-index: 1;
+
+  text {
+    font-size: 52rpx;
+  }
+}
+
+.sm-waves {
+  position: absolute;
+  top: 8rpx;
+  right: -24rpx;
+  display: flex;
+  gap: 4rpx;
+  align-items: flex-end;
+  height: 32rpx;
+}
+
+.wave {
+  width: 4rpx;
+  border-radius: 2rpx;
+  animation: waveHeight 1s ease-in-out infinite;
+
+  &.w1 { height: 12rpx; animation-delay: 0s; }
+  &.w2 { height: 24rpx; animation-delay: 0.15s; }
+  &.w3 { height: 18rpx; animation-delay: 0.3s; }
+  &.w4 { height: 28rpx; animation-delay: 0.45s; }
+}
+
+@keyframes waveHeight {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.4); }
+}
+
+.sm-play {
+  position: absolute;
+  top: 0;
+  right: -20rpx;
+  width: 36rpx;
+  height: 36rpx;
+}
+
+.play-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  border: 2rpx solid;
+  animation: playRingPulse 2s ease-out infinite;
+}
+
+@keyframes playRingPulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16rpx;
+}
+
+.sm-info {
+  margin-bottom: 20rpx;
+}
+
+.sm-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
   color: $text-primary;
   margin-bottom: 6rpx;
 }
 
-.card-subtitle {
+.sm-desc {
   display: block;
   font-size: 26rpx;
   color: $text-secondary;
   margin-bottom: 4rpx;
 }
 
-.card-detail {
+.sm-detail {
   display: block;
-  font-size: $font-sm;
+  font-size: 24rpx;
   color: $text-tertiary;
 }
 
-.card-action {
-  position: absolute;
-  right: 32rpx;
-  top: 50%;
-  transform: translateY(-50%);
+.sm-action {
+  display: flex;
+  justify-content: flex-end;
 }
 
-.action-circle {
-  width: 64rpx;
-  height: 64rpx;
+.sm-arrow {
+  width: 56rpx;
+  height: 56rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -574,108 +978,148 @@ onShow(() => {
 
   text {
     font-size: 28rpx;
-    color: $text-white;
-    font-weight: $font-bold;
+    color: #fff;
+    font-weight: 600;
   }
 }
 
-.card-decoration {
-  display: none;
-}
-
-.deco-star {
-  display: none;
-}
-
-// === 智能创作区 ===
-.ai-creation-section {
+// ============================================
+// 智能创作区
+// ============================================
+.smart-section {
   margin-bottom: 32rpx;
 }
 
-.ai-header {
+.smart-header {
   display: flex;
   align-items: center;
   gap: 20rpx;
-  margin-bottom: 24rpx;
+  margin-bottom: 28rpx;
 }
 
-.ai-icon-wrap {
+.smart-icon-area {
   position: relative;
-  width: 72rpx;
-  height: 72rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 80rpx;
+  height: 80rpx;
+  flex-shrink: 0;
 }
 
-.ai-pulse {
+.smart-glow {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  border-radius: $radius-md;
+  border-radius: $radius-lg;
   background: $gradient-dreamy;
-  animation: aiPulse 2s ease-in-out infinite;
+  filter: blur(16rpx);
+  opacity: 0.6;
+  animation: smartGlow 3s ease-in-out infinite;
 }
 
-@keyframes aiPulse {
-  0%, 100% { transform: scale(1); opacity: 0.6; }
-  50% { transform: scale(1.1); opacity: 0.4; }
+@keyframes smartGlow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
 }
 
-.ai-icon {
+.smart-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: $radius-lg;
+  border: 2rpx solid rgba($primary, 0.2);
+  animation: smartRingSpin 8s linear infinite;
+}
+
+@keyframes smartRingSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.smart-icon {
   position: relative;
   z-index: 1;
-  font-size: 40rpx;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md;
+
+  text {
+    font-size: 44rpx;
+  }
 }
 
-.ai-title-wrap {
+.smart-title-area {
   flex: 1;
 }
 
-.ai-title {
+.smart-title {
   display: block;
-  font-size: $font-md;
-  font-weight: $font-bold;
+  font-size: $font-lg;
+  font-weight: 700;
   color: $text-primary;
 }
 
-.ai-subtitle {
+.smart-subtitle {
   display: block;
   font-size: $font-sm;
   color: $text-tertiary;
   margin-top: 4rpx;
 }
 
-.ai-input-area {
+// 输入卡片
+.smart-input-card {
   position: relative;
-  background: $bg-card;
-  border: 1rpx solid $border-light;
-  border-radius: $radius-lg;
-  padding: 24rpx;
-  box-shadow: $shadow-card;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 36rpx;
+  padding: 32rpx;
+  box-shadow: $shadow-lg;
+  border: 1rpx solid rgba(255, 255, 255, 0.8);
+  overflow: hidden;
 }
 
-.input-glow {
-  display: none;
+.input-card-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 30%, rgba($primary, 0.03) 0%, transparent 50%);
+  pointer-events: none;
 }
 
-.input-container {
+.input-wrapper {
   position: relative;
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
 }
 
-.ai-input {
+.input-decor {
+  position: absolute;
+  top: 16rpx;
+  left: 16rpx;
+  opacity: 0.5;
+}
+
+.decor-icon {
+  font-size: 28rpx;
+}
+
+.smart-textarea {
   width: 100%;
-  min-height: 120rpx;
-  padding: 20rpx;
+  min-height: 140rpx;
+  padding: 56rpx 20rpx 40rpx 20rpx;
   background: $bg-soft;
   border: 1rpx solid $border-light;
-  border-radius: $radius-md;
+  border-radius: $radius-lg;
   font-size: $font-base;
   color: $text-primary;
-  line-height: 1.6;
+  line-height: 1.7;
   box-sizing: border-box;
 
   &::placeholder {
@@ -683,103 +1127,178 @@ onShow(() => {
   }
 }
 
-.input-footer {
+.input-counter {
   position: absolute;
-  bottom: 12rpx;
-  right: 16rpx;
+  bottom: 16rpx;
+  right: 20rpx;
+
+  text {
+    font-size: 22rpx;
+    color: $text-placeholder;
+  }
 }
 
-.char-count {
-  font-size: 22rpx;
-  color: $text-placeholder;
+// 灵感标签
+.inspiration-tags {
+  margin-bottom: 28rpx;
 }
 
-.quick-tips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  margin-bottom: 24rpx;
-}
-
-.tip-item {
+.tags-label {
   display: flex;
   align-items: center;
   gap: 8rpx;
-  padding: 12rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.label-icon {
+  font-size: 22rpx;
+}
+
+.label-text {
+  font-size: 24rpx;
+  color: $text-tertiary;
+  font-weight: 500;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 14rpx 24rpx;
   background: $bg-soft;
   border: 1rpx solid $border-light;
   border-radius: $radius-full;
-  transition: all $duration-base $ease-out;
+  transition: all 0.2s ease;
 
   &:active {
     transform: scale(0.95);
     background: rgba($primary, 0.08);
-    border-color: $primary-light;
+    border-color: rgba($primary, 0.2);
   }
 }
 
-.tip-emoji {
+.tag-emoji {
   font-size: 24rpx;
 }
 
-.tip-text {
-  font-size: $font-sm;
+.tag-text {
+  font-size: 26rpx;
   color: $text-secondary;
 }
 
-.ai-submit-btn {
+// 提交按钮
+.submit-btn {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100rpx;
-  background: $gradient-primary;
-  border-radius: $radius-xl;
-  box-shadow: $shadow-button;
+  height: 108rpx;
+  border-radius: 54rpx;
   overflow: hidden;
-  transition: all $duration-base $ease-out;
 
   &:active {
     transform: scale(0.98);
   }
 
   &.disabled {
-    background: $bg-soft;
-    box-shadow: none;
+    .btn-bg {
+      background: $bg-soft;
+    }
 
-    .btn-shine {
+    .btn-shimmer {
       display: none;
     }
 
     .btn-text {
       color: $text-placeholder;
     }
+
+    .btn-icon-wrap {
+      background: transparent;
+    }
+
+    .btn-arrow {
+      opacity: 0.3;
+    }
   }
 }
 
-.btn-shine {
-  display: none;
+.btn-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $gradient-primary;
+  box-shadow: $shadow-button;
+}
+
+.btn-shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: btnShimmer 3s ease-in-out infinite;
+}
+
+@keyframes btnShimmer {
+  0% { left: -100%; }
+  50%, 100% { left: 150%; }
 }
 
 .btn-content {
   position: relative;
   z-index: 1;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  justify-content: center;
+  gap: 16rpx;
+}
+
+.btn-icon-wrap {
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
 }
 
 .btn-icon {
-  font-size: 32rpx;
+  font-size: 28rpx;
 }
 
 .btn-text {
-  font-size: $font-md;
-  font-weight: $font-semibold;
-  color: $text-white;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #fff;
 }
 
-// === 底部安全区 ===
+.btn-arrow {
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+
+  text {
+    font-size: 28rpx;
+    color: #fff;
+  }
+}
+
+// ============================================
+// 底部安全区
+// ============================================
 .safe-bottom {
   height: calc(env(safe-area-inset-bottom) + 100rpx);
 }
