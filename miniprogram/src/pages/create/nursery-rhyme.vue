@@ -117,61 +117,42 @@
         </view>
 
         <view class="style-sections">
-          <!-- 音乐氛围 - 扩展到 8 种 -->
+          <!-- 音乐氛围 - 紧凑4列布局 -->
           <view class="style-section music-section">
-            <view class="section-header">
-              <view class="section-icon-wrap music">
-                <text class="section-icon">🎵</text>
-              </view>
-              <text class="section-title">音乐氛围</text>
+            <view class="section-header-compact">
+              <text class="section-icon-mini">🎵</text>
+              <text class="section-title-compact">音乐氛围</text>
             </view>
-            <view class="music-mood-grid">
+            <view class="mood-compact-grid">
               <view
                 v-for="mood in musicMoods"
                 :key="mood.value"
-                class="music-mood-card"
-                :class="{ selected: selectedMood === mood.value }"
+                class="mood-compact-card"
+                :class="[mood.value, { selected: selectedMood === mood.value }]"
                 @tap="onMoodChange(mood.value)"
               >
-                <view class="mood-visual" :class="mood.value">
-                  <text class="mood-icon">{{ mood.icon }}</text>
-                  <view class="mood-bars">
-                    <view class="bar" v-for="i in 5" :key="i"></view>
-                  </view>
-                </view>
-                <view class="mood-info">
-                  <text class="mood-name">{{ mood.label }}</text>
-                  <text class="mood-desc">{{ mood.description }}</text>
-                </view>
-                <view v-if="selectedMood === mood.value" class="mood-check">
-                  <text>✓</text>
-                </view>
+                <text class="mood-compact-icon">{{ mood.icon }}</text>
+                <text class="mood-compact-name">{{ mood.label }}</text>
               </view>
             </view>
           </view>
 
-          <!-- 人声类型 - 6 种 -->
+          <!-- 人声类型 - 紧凑3列布局 -->
           <view class="style-section vocal-section">
-            <view class="section-header">
-              <view class="section-icon-wrap vocal">
-                <text class="section-icon">🎤</text>
-              </view>
-              <text class="section-title">人声类型</text>
+            <view class="section-header-compact">
+              <text class="section-icon-mini">🎤</text>
+              <text class="section-title-compact">人声类型</text>
             </view>
-            <view class="vocal-type-grid">
+            <view class="vocal-compact-grid">
               <view
                 v-for="vocal in vocalTypes"
                 :key="vocal.value"
-                class="vocal-type-card"
+                class="vocal-compact-card"
                 :class="{ selected: selectedVocalType === vocal.value }"
                 @tap="selectedVocalType = vocal.value"
               >
-                <text class="vocal-icon">{{ vocal.icon }}</text>
-                <view class="vocal-info">
-                  <text class="vocal-name">{{ vocal.label }}</text>
-                  <text class="vocal-desc">{{ vocal.description }}</text>
-                </view>
-                <view v-if="selectedVocalType === vocal.value" class="vocal-check">✓</view>
+                <text class="vocal-compact-icon">{{ vocal.icon }}</text>
+                <text class="vocal-compact-name">{{ vocal.label }}</text>
               </view>
             </view>
           </view>
@@ -297,14 +278,20 @@ import {
   VOCAL_RANGES,
   VOCAL_EMOTIONS,
   VOCAL_TECHNIQUES,
+  INSTRUMENTS_BY_FAMILY,
+  SOUND_EFFECTS,
   SONG_STRUCTURES,
   ACTION_TYPES,
   LANGUAGES,
+  CULTURAL_STYLES,
   EDUCATIONAL_FOCUS,
+  FAVORITE_COLORS,
   getScenePresetParams,
   getMoodLinkageParams,
   getTempoHint,
   getEnergyHint,
+  getLyricComplexityHint,
+  getRepetitionHint,
   DEFAULT_PARAMS
 } from '@/config/nurseryRhymeConfig'
 import type { ScenePreset, NurseryRhymeFullParams } from '@/config/nurseryRhymeConfig'
@@ -515,6 +502,90 @@ const confirmSummary = computed(() => {
     const allFocus = EDUCATIONAL_FOCUS.flatMap(g => g.options)
     const focus = allFocus.find(f => f.value === advancedParams.educational_focus)
     if (focus) summary.push({ label: '教育目标', value: focus.label, icon: '📚' })
+  }
+
+  // 乐器配置
+  if (advancedParams.instruments && advancedParams.instruments.length > 0) {
+    const allInstruments = INSTRUMENTS_BY_FAMILY.flatMap(g => g.options)
+    const names = advancedParams.instruments
+      .map(v => allInstruments.find(i => i.value === v)?.label)
+      .filter(Boolean)
+      .slice(0, 3) // 最多显示3个
+    if (names.length > 0) {
+      const displayText = names.join('、') + (advancedParams.instruments.length > 3 ? '...' : '')
+      summary.push({ label: '乐器配置', value: displayText, icon: '🎹' })
+    }
+  }
+
+  // 音效元素
+  if (advancedParams.sound_effects && advancedParams.sound_effects.length > 0) {
+    const allEffects = SOUND_EFFECTS.flatMap(g => g.options)
+    const names = advancedParams.sound_effects
+      .map(v => allEffects.find(e => e.value === v)?.label)
+      .filter(Boolean)
+      .slice(0, 3)
+    if (names.length > 0) {
+      const displayText = names.join('、') + (advancedParams.sound_effects.length > 3 ? '...' : '')
+      summary.push({ label: '音效元素', value: displayText, icon: '🔊' })
+    }
+  }
+
+  // 歌词复杂度
+  if (advancedParams.lyric_complexity && advancedParams.lyric_complexity !== 5) {
+    summary.push({
+      label: '歌词复杂度',
+      value: getLyricComplexityHint(advancedParams.lyric_complexity),
+      icon: '📝'
+    })
+  }
+
+  // 重复程度
+  if (advancedParams.repetition_level && advancedParams.repetition_level !== 6) {
+    summary.push({
+      label: '重复程度',
+      value: getRepetitionHint(advancedParams.repetition_level),
+      icon: '🔁'
+    })
+  }
+
+  // 文化风格
+  if (advancedParams.cultural_style) {
+    const allStyles = CULTURAL_STYLES.flatMap(g => g.options)
+    const style = allStyles.find(s => s.value === advancedParams.cultural_style)
+    if (style) summary.push({ label: '文化风格', value: style.label, icon: '🎭' })
+  }
+
+  // 喜欢的颜色
+  if (advancedParams.favorite_colors && advancedParams.favorite_colors.length > 0) {
+    const allColors = FAVORITE_COLORS.flatMap(g => g.options)
+    const colors = advancedParams.favorite_colors
+      .map(v => {
+        const color = allColors.find(c => c.value === v)
+        return color ? `${color.icon}${color.label}` : null
+      })
+      .filter(Boolean)
+      .slice(0, 4)
+    if (colors.length > 0) {
+      summary.push({ label: '喜欢的颜色', value: colors.join(' '), icon: '🎨' })
+    }
+  }
+
+  // 风格权重 (非默认值时显示)
+  if (advancedParams.style_weight !== undefined && advancedParams.style_weight !== 0.5) {
+    summary.push({
+      label: '风格权重',
+      value: `${Math.round(advancedParams.style_weight * 100)}%`,
+      icon: '🎛️'
+    })
+  }
+
+  // 创意程度 (非默认值时显示)
+  if (advancedParams.creativity !== undefined && advancedParams.creativity !== 0.5) {
+    summary.push({
+      label: '创意程度',
+      value: `${Math.round(advancedParams.creativity * 100)}%`,
+      icon: '✨'
+    })
   }
 
   return summary
@@ -1770,123 +1841,23 @@ onLoad((options) => {
 }
 
 // ==========================================
-// 人声类型 - 温暖渐变卡片
+// 紧凑标题样式
 // ==========================================
-// 人声专属色彩变量
-$vocal-primary: #8B7EC8;  // 柔和紫罗兰
-$vocal-secondary: #A896D3;
-
-.vocal-type-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-sm;
-}
-
-.vocal-type-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: $spacing-md $spacing-xs;
-  padding-top: 28rpx;
-  background: $bg-card;
-  border-radius: $radius-md;
-  border: 2rpx solid $border-light;
-  box-shadow: $shadow-sm;
-  transition: all $duration-base $ease-bounce;
-  overflow: hidden;
-
-  // 顶部装饰条
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4rpx;
-    background: linear-gradient(90deg, transparent, rgba($vocal-primary, 0.3), transparent);
-    transition: all $duration-fast;
-  }
-
-  &.selected {
-    background: linear-gradient(165deg, rgba($vocal-primary, 0.06) 0%, rgba($vocal-secondary, 0.12) 100%);
-    border-color: $vocal-primary;
-    box-shadow: 0 6rpx 20rpx rgba($vocal-primary, 0.2);
-
-    &::before {
-      background: linear-gradient(90deg, $vocal-primary, $vocal-secondary);
-      height: 6rpx;
-    }
-
-    .vocal-icon {
-      transform: scale(1.1);
-    }
-
-    .vocal-name {
-      color: $vocal-primary;
-      font-weight: $font-bold;
-    }
-  }
-
-  &:active {
-    transform: scale(0.96);
-  }
-}
-
-.vocal-icon {
-  width: 56rpx;
-  height: 56rpx;
+.section-header-compact {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: linear-gradient(145deg, rgba($vocal-primary, 0.1), rgba($vocal-secondary, 0.15));
-  border-radius: 50%;
-  font-size: 28rpx;
-  margin-bottom: $spacing-xs;
-  transition: transform $duration-base $ease-bounce;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
 }
 
-.vocal-info {
-  text-align: center;
+.section-icon-mini {
+  font-size: 24rpx;
 }
 
-.vocal-name {
-  display: block;
+.section-title-compact {
   font-size: $font-sm;
+  font-weight: $font-semibold;
   color: $text-primary;
-  font-weight: $font-medium;
-  margin-bottom: 4rpx;
-  transition: all $duration-fast;
-}
-
-.vocal-desc {
-  display: block;
-  font-size: 20rpx;
-  color: $text-tertiary;
-  line-height: 1.4;
-}
-
-.vocal-check {
-  position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  width: 32rpx;
-  height: 32rpx;
-  background: linear-gradient(135deg, $vocal-primary, $vocal-secondary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18rpx;
-  color: $text-white;
-  font-weight: $font-bold;
-  box-shadow: 0 2rpx 8rpx rgba($vocal-primary, 0.4);
-  animation: popIn $duration-base $ease-bounce;
-}
-
-@keyframes popIn {
-  0% { transform: scale(0); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
 }
 
 .section-title {
@@ -1896,180 +1867,138 @@ $vocal-secondary: #A896D3;
 }
 
 // ==========================================
-// 音乐氛围 - 活力音波卡片 (8种氛围)
+// 音乐氛围 - 紧凑4列网格
 // ==========================================
-.music-mood-grid {
+// 氛围主题色映射
+$mood-colors: (
+  cheerful: #FF7B54,
+  gentle: #7FB285,
+  playful: #66CC99,
+  lullaby: #5BA4D9,
+  educational: #F5A623,
+  rhythmic: #FF6384,
+  soothing: #8B7EC8,
+  festive: #FF6384
+);
+
+.mood-compact-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-sm;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-xs;
 }
 
-.music-mood-card {
-  position: relative;
+.mood-compact-card {
   display: flex;
   flex-direction: column;
-  background: $bg-card;
-  border-radius: $radius-lg;
-  border: 2rpx solid $border-light;
-  overflow: hidden;
-  transition: all $duration-base $ease-bounce;
-  box-shadow: $shadow-sm;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-sm 4rpx;
+  background: $bg-soft;
+  border-radius: $radius-md;
+  border: 2rpx solid transparent;
+  transition: all $duration-fast $ease-bounce;
+  min-height: 88rpx;
+
+  &:active {
+    transform: scale(0.95);
+  }
 
   &.selected {
     border-color: $song-primary;
-    box-shadow: 0 8rpx 28rpx rgba($song-primary, 0.25);
+    box-shadow: 0 4rpx 12rpx rgba($song-primary, 0.2);
 
-    .mood-visual {
-      &::after {
-        opacity: 1;
+    .mood-compact-icon {
+      transform: scale(1.1);
+    }
+
+    .mood-compact-name {
+      font-weight: $font-semibold;
+    }
+  }
+
+  // 各氛围选中时的独特背景色
+  @each $mood, $color in $mood-colors {
+    &.#{$mood}.selected {
+      background: linear-gradient(145deg, rgba($color, 0.12), rgba($color, 0.06));
+      border-color: $color;
+
+      .mood-compact-name {
+        color: $color;
       }
     }
-
-    .mood-bars .bar {
-      animation: barBounce 0.6s ease-in-out infinite;
-      opacity: 0.9;
-    }
-
-    .mood-icon {
-      transform: scale(1.15);
-    }
-
-    .mood-name {
-      color: $song-primary;
-    }
   }
+}
+
+.mood-compact-icon {
+  font-size: 28rpx;
+  margin-bottom: 4rpx;
+  transition: transform $duration-fast $ease-bounce;
+}
+
+.mood-compact-name {
+  font-size: $font-xs;
+  color: $text-secondary;
+  text-align: center;
+  white-space: nowrap;
+  transition: all $duration-fast;
+}
+
+// ==========================================
+// 人声类型 - 紧凑3列网格
+// ==========================================
+$vocal-primary: #8B7EC8;
+$vocal-secondary: #A896D3;
+
+.vocal-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-xs;
+}
+
+.vocal-compact-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-sm 4rpx;
+  background: $bg-soft;
+  border-radius: $radius-md;
+  border: 2rpx solid transparent;
+  transition: all $duration-fast $ease-bounce;
+  min-height: 80rpx;
 
   &:active {
-    transform: scale(0.97);
+    transform: scale(0.95);
+  }
+
+  &.selected {
+    background: linear-gradient(145deg, rgba($vocal-primary, 0.12), rgba($vocal-secondary, 0.08));
+    border-color: $vocal-primary;
+    box-shadow: 0 4rpx 12rpx rgba($vocal-primary, 0.2);
+
+    .vocal-compact-icon {
+      transform: scale(1.1);
+    }
+
+    .vocal-compact-name {
+      color: $vocal-primary;
+      font-weight: $font-semibold;
+    }
   }
 }
 
-.mood-visual {
-  height: 110rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-md;
-  position: relative;
-
-  // 选中光晕效果
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.4) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity $duration-fast;
-    pointer-events: none;
-  }
-
-  // 8种氛围的独特渐变色
-  &.cheerful {
-    background: linear-gradient(135deg, rgba(255, 179, 71, 0.18) 0%, rgba(255, 123, 84, 0.15) 100%);
-    .bar { background: #FF7B54; }
-  }
-  &.gentle {
-    background: linear-gradient(135deg, rgba(127, 178, 133, 0.18) 0%, rgba(91, 164, 217, 0.15) 100%);
-    .bar { background: #7FB285; }
-  }
-  &.playful {
-    background: linear-gradient(135deg, rgba(102, 204, 153, 0.18) 0%, rgba(245, 166, 35, 0.15) 100%);
-    .bar { background: #66CC99; }
-  }
-  &.lullaby {
-    background: linear-gradient(135deg, rgba(91, 164, 217, 0.18) 0%, rgba(139, 92, 246, 0.15) 100%);
-    .bar { background: #5BA4D9; }
-  }
-  &.educational {
-    background: linear-gradient(135deg, rgba(245, 166, 35, 0.18) 0%, rgba(127, 178, 133, 0.15) 100%);
-    .bar { background: #F5A623; }
-  }
-  &.rhythmic {
-    background: linear-gradient(135deg, rgba(255, 123, 84, 0.18) 0%, rgba(255, 99, 132, 0.15) 100%);
-    .bar { background: #FF6384; }
-  }
-  &.soothing {
-    background: linear-gradient(135deg, rgba(139, 126, 200, 0.18) 0%, rgba(168, 150, 211, 0.15) 100%);
-    .bar { background: #8B7EC8; }
-  }
-  &.festive {
-    background: linear-gradient(135deg, rgba(255, 99, 132, 0.18) 0%, rgba(245, 166, 35, 0.15) 100%);
-    .bar { background: #FF6384; }
-  }
-}
-
-.mood-icon {
-  font-size: 44rpx;
-  transition: transform $duration-base $ease-bounce;
-  filter: drop-shadow(0 2rpx 4rpx rgba(0,0,0,0.08));
-}
-
-.mood-bars {
-  display: flex;
-  gap: 5rpx;
-  align-items: flex-end;
-  height: 44rpx;
-}
-
-.bar {
-  width: 7rpx;
-  background: $song-primary;
-  border-radius: 4rpx;
-  opacity: 0.5;
-
-  &:nth-child(1) { height: 18rpx; animation-delay: 0s; }
-  &:nth-child(2) { height: 30rpx; animation-delay: 0.1s; }
-  &:nth-child(3) { height: 22rpx; animation-delay: 0.2s; }
-  &:nth-child(4) { height: 36rpx; animation-delay: 0.3s; }
-  &:nth-child(5) { height: 26rpx; animation-delay: 0.4s; }
-}
-
-@keyframes barBounce {
-  0%, 100% { transform: scaleY(0.5); opacity: 0.4; }
-  50% { transform: scaleY(1); opacity: 1; }
-}
-
-.mood-info {
-  padding: $spacing-sm $spacing-xs;
-  text-align: center;
-  background: linear-gradient(180deg, transparent 0%, rgba($bg-soft, 0.5) 100%);
-}
-
-.mood-name {
-  display: block;
-  font-size: $font-sm;
-  font-weight: $font-bold;
-  color: $text-primary;
+.vocal-compact-icon {
+  font-size: 26rpx;
   margin-bottom: 4rpx;
-  transition: color $duration-fast;
+  transition: transform $duration-fast $ease-bounce;
 }
 
-.mood-desc {
-  display: block;
+.vocal-compact-name {
   font-size: $font-xs;
-  color: $text-tertiary;
-  line-height: 1.3;
-}
-
-.mood-check {
-  position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  width: 32rpx;
-  height: 32rpx;
-  border-radius: 50%;
-  background: $song-primary;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  text {
-    font-size: 18rpx;
-    color: $text-white;
-  }
+  color: $text-secondary;
+  text-align: center;
+  white-space: nowrap;
+  transition: all $duration-fast;
 }
 
 // ==========================================
