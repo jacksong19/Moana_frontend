@@ -610,10 +610,12 @@ async function loadContent() {
     return
   }
 
-  // 2. 使用 store 中的数据（从生成页跳转）
-  if (contentStore.currentContent) {
-    console.log('[loadContent] 使用 store 数据')
-    content.value = contentStore.currentContent as PictureBook
+  // 2. 使用 store 中的数据（从生成页跳转，需要 ID 匹配或无 ID 参数）
+  // 修复：只有当 store 中的内容 ID 与 URL 参数 ID 匹配时才使用缓存
+  const storeContent = contentStore.currentContent as PictureBook | null
+  if (storeContent && (!contentId.value || storeContent.id === contentId.value)) {
+    console.log('[loadContent] 使用 store 数据, ID:', storeContent.id)
+    content.value = storeContent
     initAfterLoad()
     loading.value = false
     return
