@@ -47,10 +47,6 @@
               <view class="decor-corner corner-bl"></view>
               <view class="decor-corner corner-br"></view>
             </view>
-            <!-- 书签标记 -->
-            <view class="page-bookmark">
-              <text class="bookmark-icon">📖</text>
-            </view>
             <!-- 纸张质感层 -->
             <view class="page-texture"></view>
             <!-- 文字内容 -->
@@ -62,15 +58,6 @@
               <view class="page-number">
                 <text>{{ index + 1 }} / {{ content?.pages?.length || 0 }}</text>
               </view>
-            </view>
-            <!-- 互动提示 -->
-            <view
-              v-if="page.interaction && showInteraction && currentPage === index"
-              class="interaction-hint"
-              @tap.stop="handleInteraction(page, index)"
-            >
-              <text class="hint-icon">{{ getInteractionIcon(page.interaction.type) }}</text>
-              <text class="hint-text">{{ page.interaction.prompt }}</text>
             </view>
           </view>
         </view>
@@ -221,6 +208,8 @@ let audioContext: UniApp.InnerAudioContext | null = null
 let autoPlayTimer: number | null = null
 let checkTimer: number | null = null
 const audioReady = ref(false)
+// 音频缓存：页码 -> 本地文件路径
+const audioCache = ref<Map<number, string>>(new Map())
 
 // 计算属性
 const totalPages = computed(() => content.value?.pages?.length || 0)
@@ -318,39 +307,154 @@ function onImageError(index: number) {
   imageLoaded.value[index] = true
 }
 
-// 智能预加载 - 只加载当前页和相邻页
-function preloadAdjacentImages(centerIndex: number) {
+// 智能预加载 - 更激进的预加载策略
+function preloadAdjacentImages(centerIndex: number, range = 3) {
   if (!content.value?.pages?.length) return
 
-  const indices = [centerIndex - 1, centerIndex, centerIndex + 1]
-    .filter(i => i >= 0 && i < content.value!.pages.length)
+  // 预加载当前页及后续 range 页
+  const indices: number[] = []
+  for (let i = centerIndex; i <= centerIndex + range && i < content.value.pages.length; i++) {
+    indices.push(i)
+  }
+  // 也预加载前一页（用于回退）
+  if (centerIndex > 0) indices.unshift(centerIndex - 1)
 
   indices.forEach(index => {
     if (!imageLoaded.value[index]) {
       const page = content.value!.pages[index]
       if (page.image_url) {
-        uni.getImageInfo({
-          src: page.image_url,
-          success: () => { imageLoaded.value[index] = true },
-          fail: () => { /* 静默失败 */ }
+        // 使用 downloadFile 真正下载图片到本地缓存
+        uni.downloadFile({
+          url: page.image_url,
+          success: (res) => {
+            if (res.statusCode === 200) {
+              imageLoaded.value[index] = true
+              console.log(`[预加载] 图片 ${index + 1} 完成`)
+            }
+          },
+          fail: () => {
+            // 降级使用 getImageInfo
+            uni.getImageInfo({
+              src: page.image_url!,
+              success: () => { imageLoaded.value[index] = true },
+              fail: () => { /* 静默失败 */ }
+            })
+          }
         })
       }
     }
   })
 }
 
-// 音频播放
-function playCurrentPageAudio() {
+// 预加载指定页音频（下载到本地缓存）
+function preloadAudio(pageIndex: number) {
+  if (!content.value?.pages?.length) return
+  if (pageIndex < 0 || pageIndex >= content.value.pages.length) return
+  // 已缓存则跳过
+  if (audioCache.value.has(pageIndex)) return
+
+  const page = content.value.pages[pageIndex]
+  if (!page.audio_url) return
+
+  let audioUrl = page.audio_url
+  if (audioUrl.startsWith('http://')) {
+    audioUrl = audioUrl.replace('http://', 'https://')
+  }
+
+  console.log(`[预加载] 开始下载音频 ${pageIndex + 1}...`)
+  uni.downloadFile({
+    url: audioUrl,
+    success: (res) => {
+      if (res.statusCode === 200 && res.tempFilePath) {
+        audioCache.value.set(pageIndex, res.tempFilePath)
+        console.log(`[预加载] 音频 ${pageIndex + 1} 完成，本地路径:`, res.tempFilePath)
+      }
+    },
+    fail: (err) => {
+      console.warn(`[预加载] 音频 ${pageIndex + 1} 失败:`, err)
+    }
+  })
+}
+
+// 批量预加载多页音频
+function preloadAudioBatch(startIndex: number, count = 3) {
+  for (let i = startIndex; i < startIndex + count; i++) {
+    preloadAudio(i)
+  }
+}
+
+// 兼容旧函数名
+function preloadNextAudio(pageIndex: number) {
+  preloadAudio(pageIndex + 1)
+}
+
+// 等待图片加载完成
+function waitForImageLoad(pageIndex: number, timeout = 5000): Promise<boolean> {
+  return new Promise((resolve) => {
+    // 已经加载完成
+    if (imageLoaded.value[pageIndex]) {
+      resolve(true)
+      return
+    }
+
+    const startTime = Date.now()
+    const checkInterval = setInterval(() => {
+      if (imageLoaded.value[pageIndex]) {
+        clearInterval(checkInterval)
+        resolve(true)
+      } else if (Date.now() - startTime > timeout) {
+        clearInterval(checkInterval)
+        console.warn(`[等待图片] 页面 ${pageIndex + 1} 超时`)
+        resolve(false) // 超时也继续，避免卡死
+      }
+    }, 100)
+  })
+}
+
+// 等待音频缓存完成
+function waitForAudioCache(pageIndex: number, timeout = 2000): Promise<string | null> {
+  return new Promise((resolve) => {
+    // 已缓存
+    if (audioCache.value.has(pageIndex)) {
+      resolve(audioCache.value.get(pageIndex)!)
+      return
+    }
+
+    const startTime = Date.now()
+    const checkInterval = setInterval(() => {
+      if (audioCache.value.has(pageIndex)) {
+        clearInterval(checkInterval)
+        resolve(audioCache.value.get(pageIndex)!)
+      } else if (Date.now() - startTime > timeout) {
+        clearInterval(checkInterval)
+        resolve(null) // 超时返回 null，使用原始 URL
+      }
+    }, 50)
+  })
+}
+
+// 音频播放 - 优化：等待图片加载 + 使用本地缓存音频
+async function playCurrentPageAudio() {
   if (!content.value?.pages?.length || !isPlaying.value) return
 
   stopAutoPlay()
-  const page = content.value.pages[currentPage.value]
+  const pageIndex = currentPage.value
+  const page = content.value.pages[pageIndex]
   if (!page) return
 
-  // 显示互动（如果有）
-  if (page.interaction) {
-    setTimeout(() => { showInteraction.value = true }, 1500)
+  // 等待当前页图片加载完成（最多等 5 秒）
+  if (!imageLoaded.value[pageIndex]) {
+    console.log(`[绘本] 等待页面 ${pageIndex + 1} 图片加载...`)
+    await waitForImageLoad(pageIndex, 5000)
   }
+
+  // 再次检查播放状态（等待期间可能已暂停）
+  if (!isPlaying.value) return
+
+  // 预加载后续页面的图片和音频
+  preloadAdjacentImages(pageIndex + 1, 2)
+  preloadAudioBatch(pageIndex + 1, 3)
+
 
   if (page.audio_url) {
     // 销毁旧实例
@@ -360,44 +464,54 @@ function playCurrentPageAudio() {
     }
     audioReady.value = false
 
-    setTimeout(() => {
-      if (!isPlaying.value) return
+    // 优先使用本地缓存，等待最多 2 秒
+    let audioSrc: string
+    const cachedPath = await waitForAudioCache(pageIndex, 2000)
 
-      // 设置音频选项（开发工具不支持，静默忽略）
-      try {
-        uni.setInnerAudioOption({
-          obeyMuteSwitch: false,
-          mixWithOther: true
-        })
-      } catch (e) { /* 开发工具不支持 */ }
-
-      audioContext = uni.createInnerAudioContext()
-      audioContext.volume = 1.0
-
-      audioContext.onPlay(() => {
-        console.log('[绘本音频] 播放开始')
-        audioReady.value = true
-      })
-      audioContext.onEnded(() => { onAudioEnded() })
-      audioContext.onError((err: any) => {
-        console.error('[绘本音频] 播放错误:', err?.errMsg || err?.errCode || err)
-        console.error('[绘本音频] 错误URL:', page.audio_url)
-        audioReady.value = false
-        startFallbackTimer()
-      })
-
-      let audioUrl = page.audio_url!
-      console.log('[绘本音频] 准备播放:', audioUrl)
+    if (cachedPath) {
+      audioSrc = cachedPath
+      console.log(`[绘本音频] 使用本地缓存: ${pageIndex + 1}`)
+    } else {
+      // 没有缓存，使用原始 URL
+      let audioUrl = page.audio_url
       if (audioUrl.startsWith('http://')) {
         audioUrl = audioUrl.replace('http://', 'https://')
       }
-      audioContext.src = encodeURI(audioUrl)
+      audioSrc = encodeURI(audioUrl)
+      console.log(`[绘本音频] 使用网络URL: ${pageIndex + 1}`)
+    }
 
-      setTimeout(() => {
-        if (audioContext && isPlaying.value) {
-          audioContext.play()
-        }
-      }, 100)
+    // 再次检查播放状态
+    if (!isPlaying.value) return
+
+    // 设置音频选项（开发工具不支持，静默忽略）
+    try {
+      uni.setInnerAudioOption({
+        obeyMuteSwitch: false,
+        mixWithOther: true
+      })
+    } catch (e) { /* 开发工具不支持 */ }
+
+    audioContext = uni.createInnerAudioContext()
+    audioContext.volume = 1.0
+
+    audioContext.onPlay(() => {
+      console.log('[绘本音频] 播放开始, 页面:', pageIndex + 1)
+      audioReady.value = true
+    })
+    audioContext.onEnded(() => { onAudioEnded() })
+    audioContext.onError((err: any) => {
+      console.error('[绘本音频] 播放错误:', err?.errMsg || err?.errCode || err)
+      audioReady.value = false
+      startFallbackTimer()
+    })
+
+    audioContext.src = audioSrc
+
+    setTimeout(() => {
+      if (audioContext && isPlaying.value) {
+        audioContext.play()
+      }
     }, 50)
   } else {
     // 无音频，使用定时器
@@ -411,16 +525,35 @@ function stopCurrentAudio() {
   }
 }
 
+// 翻到下一页 - 优化：等待下一页图片加载完成
+async function goToNextPage() {
+  if (!isPlaying.value) return
+
+  const nextPage = currentPage.value + 1
+  if (nextPage >= totalPages.value) {
+    handleComplete()
+    return
+  }
+
+  // 等待下一页图片加载完成（最多等 3 秒）
+  if (!imageLoaded.value[nextPage]) {
+    console.log(`[绘本] 等待下一页 ${nextPage + 1} 图片加载...`)
+    await waitForImageLoad(nextPage, 3000)
+  }
+
+  // 再次检查播放状态
+  if (!isPlaying.value) return
+
+  currentPage.value = nextPage
+}
+
 function onAudioEnded() {
   if (!isPlaying.value) return
 
+  // 短暂延迟后翻页（让用户有时间看完当前页）
   setTimeout(() => {
-    if (currentPage.value < totalPages.value - 1) {
-      currentPage.value++
-    } else {
-      handleComplete()
-    }
-  }, 800)
+    goToNextPage()
+  }, 600)
 }
 
 function startFallbackTimer() {
@@ -431,11 +564,7 @@ function startFallbackTimer() {
   const duration = (page?.duration || 5) * 1000
 
   autoPlayTimer = setTimeout(() => {
-    if (currentPage.value < totalPages.value - 1) {
-      currentPage.value++
-    } else {
-      handleComplete()
-    }
+    goToNextPage()
   }, duration) as unknown as number
 }
 
@@ -643,11 +772,14 @@ async function loadContent() {
 function initAfterLoad() {
   if (!content.value?.pages?.length) return
 
-  // 初始化图片状态
+  // 初始化图片状态和音频缓存
   imageLoaded.value = new Array(content.value.pages.length).fill(false)
+  audioCache.value.clear()
 
-  // 预加载前3页
-  preloadAdjacentImages(0)
+  // 激进预加载：前 5 页图片 + 前 3 页音频
+  console.log(`[绘本] 开始预加载，共 ${content.value.pages.length} 页`)
+  preloadAdjacentImages(0, 5)
+  preloadAudioBatch(0, 3) // 预加载前 3 页音频
 
   // 开始播放会话
   startPlaySession()
