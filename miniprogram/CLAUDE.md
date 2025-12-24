@@ -96,6 +96,8 @@ npm run build:mp-weixin
   - `POST /content/video` - 生成视频（超时5分钟）
   - `GET /content/list` - 获取内容列表
   - `GET /content/{id}` - 获取内容详情
+  - `GET /content/{id}/asset-details` - 获取素材参数详情（图片 prompt、模型等）
+  - `GET /content/{id}/generation-logs` - 获取生成日志（用于故障排查）
   - `POST /callback/suno/video` - Suno 视频生成回调（内部使用）
   - `GET /callback/suno/video/status/{task_id}` - 查询 Suno 视频状态
 
@@ -192,3 +194,108 @@ systemctl status kids-backend
 - 歌曲时长约 68-100 秒，由 Suno 服务决定
 - **video_url**：Suno 生成的音乐视频 URL，回调端点修复后应包含视频。若为空字符串 `""`，检查回调是否正常
 - **状态轮询备用方案**：如果状态 API 返回 `completed` 但无 `result`，前端会调用 `GET /content/{id}` 获取详情
+
+## 生成日志 API（故障排查）
+
+当内容生成失败或需要排查问题时，可以使用生成日志 API 获取详细的生成过程记录。
+
+### 获取生成日志
+
+```bash
+GET /content/{content_id}/generation-logs
+```
+
+### 响应格式
+
+```typescript
+interface GenerationLogsResponse {
+  content_id: string
+  content_type: 'picture_book' | 'nursery_rhyme' | 'video'
+  title: string
+  created_at: string
+  total_duration_ms: number    // 总生成耗时
+  status: 'completed' | 'failed'
+  logs: GenerationLogEntry[]
+  error?: string               // 失败时的错误信息
+}
+
+interface GenerationLogEntry {
+  timestamp: string            // ISO 时间戳
+  level: 'info' | 'warning' | 'error'
+  stage: string                // 生成阶段: story, image, audio, video 等
+  message: string              // 日志消息
+  details?: Record<string, any> // 详细信息（如模型参数、prompt 等）
+  duration_ms?: number         // 该步骤耗时
+}
+```
+
+### 使用场景
+
+1. **生成失败排查**
+   - 查看 `status: 'failed'` 的日志，定位失败阶段
+   - 检查 `error` 字段获取错误原因
+
+2. **性能分析**
+   - 查看各阶段 `duration_ms` 分析耗时
+   - 识别性能瓶颈（如图片生成、语音合成）
+
+3. **前端调用示例**
+   ```typescript
+   import { getGenerationLogs } from '@/api/content'
+
+   const logs = await getGenerationLogs(contentId)
+   console.log('生成状态:', logs.status)
+   console.log('总耗时:', logs.total_duration_ms, 'ms')
+   logs.logs.forEach(log => {
+     console.log(`[${log.stage}] ${log.message}`)
+   })
+   ```
+
+### 素材参数 API
+
+查看内容的素材详情（图片 prompt、模型参数等）：
+
+```bash
+GET /content/{content_id}/asset-details
+```
+
+### 响应格式
+
+```typescript
+interface AssetDetailsResponse {
+  content_id: string
+  content_type?: 'picture_book' | 'nursery_rhyme' | 'video'
+  generated_by?: {
+    story_model?: string      // 如 gemini-3-pro-preview
+    image_model?: string      // 如 gemini-3-pro-image-preview
+    tts_model?: string        // 如 gemini-tts
+  }
+  assets: AssetDetail[]       // 扁平数组，包含所有素材
+  total_count: number
+}
+
+interface AssetDetail {
+  type: 'image' | 'audio' | 'video'
+  page_num: number            // 页码
+  url: string
+  // 图片字段
+  prompt?: string             // 图片生成 prompt
+  model?: string              // 使用的模型
+  style?: string              // 艺术风格
+  width?: number | null       // 图片宽度
+  height?: number | null      // 图片高度
+  // 音频字段
+  text?: string               // 音频对应的文本
+  voice_id?: string           // TTS 音色 ID
+  duration?: number           // 音频/视频时长(秒)
+}
+```
+
+### 前端入口
+
+在内容库页面，长按内容卡片可以选择「查看素材参数」，查看该内容的生成参数详情
+
+### 注意事项
+
+- 生成日志 API 目前返回空数组，后端日志记录功能待完善
+- 素材参数 API 的 `model` 字段可能为 `"unknown"`，前端已做过滤处理
