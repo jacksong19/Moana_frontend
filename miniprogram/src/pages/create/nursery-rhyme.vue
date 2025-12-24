@@ -1079,19 +1079,17 @@ async function pollTaskStatus(taskId: string): Promise<NurseryRhyme | null> {
       // 更新消息
       generatingMessage.value = status.message || stageInfo[normalizedStage]?.message || '处理中...'
 
-      // 使用后端进度（如果有且更大），否则继续模拟
-      if (status.progress && status.progress > generatingProgress.value) {
-        generatingProgress.value = status.progress
-        console.log('[pollTaskStatus] 使用后端进度:', status.progress)
-      }
+      // 完全基于阶段来驱动进度，不使用后端的 progress 值
+      // 因为 Suno 回调的阶段是可靠的，但后端的 progress 可能不准确
+      // 进度由模拟定时器在当前阶段范围内递增，阶段切换时跳到新阶段的 minProgress
+      console.log('[pollTaskStatus] 后端进度（仅记录，不使用）:', status.progress)
 
       console.log('[pollTaskStatus] 当前进度:', generatingProgress.value, '阶段:', generatingStage.value, '状态:', status.status)
 
-      // 检查是否完成 - 多种条件检测
+      // 检查是否完成 - 仅基于明确的状态/阶段标志
+      // 不依赖后端 progress 值，因为可能不准确
       const isCompleted = status.status === 'completed' ||
-                          normalizedStage === 'complete' ||
-                          status.progress === 100 ||
-                          status.progress >= 95  // 进度 >=95% 也视为接近完成
+                          normalizedStage === 'complete'
 
       if (isCompleted) {
         console.log('[pollTaskStatus] 检测到完成状态，status:', status.status, 'stage:', normalizedStage, 'progress:', status.progress)
@@ -1148,12 +1146,8 @@ async function pollTaskStatus(taskId: string): Promise<NurseryRhyme | null> {
           }
         }
 
-        // 进度 >=95 但没有 content_id，继续轮询等待完全完成
-        if (status.progress >= 95 && status.progress < 100 && !status.content_id) {
-          console.log('[pollTaskStatus] 进度接近完成但无 content_id，继续等待...')
-        } else {
-          console.log('[pollTaskStatus] 完成状态但无数据，继续等待...')
-        }
+        // 完成状态但无数据，继续轮询等待
+        console.log('[pollTaskStatus] 完成状态但无 result/content_id，继续等待...')
       }
 
       // 检查失败状态
@@ -1238,6 +1232,34 @@ async function startGenerate() {
     } else {
       requestParams.creation_mode = 'preset'
     }
+
+    // 处理字段类型：
+    // 1. 某些字段后端期望字符串，但可能因为场景预设变成了数组，需要取第一个值
+    const stringFields = ['music_genre', 'vocal_range', 'vocal_emotion', 'vocal_style', 'song_structure', 'action_types', 'language', 'cultural_style', 'educational_focus'] as const
+    for (const field of stringFields) {
+      const value = (requestParams as any)[field]
+      if (Array.isArray(value)) {
+        (requestParams as any)[field] = value.length > 0 ? value[0] : undefined
+      }
+    }
+
+    // 2. 数组字段：清理空数组和 null/undefined 值
+    const arrayFields = ['instruments', 'sound_effects', 'vocal_effects', 'favorite_colors', 'favorite_characters', 'favorite_animals', 'inspiration_keywords'] as const
+    for (const field of arrayFields) {
+      const value = (requestParams as any)[field]
+      if (Array.isArray(value) && value.length === 0) {
+        delete (requestParams as any)[field]
+      } else if (value === null || value === undefined) {
+        delete (requestParams as any)[field]
+      }
+    }
+
+    // 3. 删除所有 undefined/null 值
+    Object.keys(requestParams).forEach(key => {
+      if ((requestParams as any)[key] === undefined || (requestParams as any)[key] === null) {
+        delete (requestParams as any)[key]
+      }
+    })
 
     console.log('[startGenerate] 请求参数:', JSON.stringify(requestParams, null, 2))
 

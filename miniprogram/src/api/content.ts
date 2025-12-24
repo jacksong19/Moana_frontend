@@ -31,6 +31,7 @@ export interface PictureBookPage {
   page_number: number
   text: string
   image_url: string
+  image_thumb_url?: string  // 256px 缩略图 URL（用于渐进式加载）
   audio_url: string
   duration: number
   interaction?: {
@@ -54,6 +55,7 @@ export interface PictureBook {
     characters: string[]
   }
   cover_url?: string
+  cover_thumb_url?: string  // 封面缩略图 URL（用于列表页快速加载）
   created_at: string
 }
 
@@ -622,10 +624,13 @@ export async function getGeneratedList(params?: {
 }
 
 /**
- * 获取内容详情
+ * 获取内容详情（带缓存，5分钟有效期）
  */
 export async function getContentDetail(contentId: string): Promise<PictureBook> {
-  return request.get<PictureBook>(`/content/${contentId}`)
+  return request.get<PictureBook>(`/content/${contentId}`, {
+    useCache: true,
+    cacheTTL: 5 * 60 * 1000  // 5 分钟缓存
+  })
 }
 
 /**

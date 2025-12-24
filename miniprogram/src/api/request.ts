@@ -1,7 +1,9 @@
 /**
  * Moana API 请求封装
- * 支持 Token 自动刷新、统一错误处理
+ * 支持 Token 自动刷新、统一错误处理、响应缓存
  */
+
+import cache from '@/utils/cache'
 
 // API 基础配置
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://kids.jackverse.cn/api/v1'
@@ -15,6 +17,8 @@ interface RequestOptions {
   showLoading?: boolean
   showError?: boolean
   timeout?: number // 超时时间（毫秒），默认 60000
+  useCache?: boolean // 是否使用缓存（仅 GET 请求有效）
+  cacheTTL?: number  // 缓存过期时间（毫秒），默认 5 分钟
 }
 
 // 响应接口
@@ -81,8 +85,19 @@ async function request<T = any>(options: RequestOptions): Promise<T> {
     header = {},
     showLoading = false,
     showError = true,
-    timeout = 60000
+    timeout = 60000,
+    useCache = false,
+    cacheTTL = 5 * 60 * 1000  // 默认 5 分钟
   } = options
+
+  // GET 请求且启用缓存时，先尝试从缓存获取
+  if (method === 'GET' && useCache) {
+    const cached = cache.get<T>(url)
+    if (cached) {
+      console.log(`[Request] 缓存命中: ${url}`)
+      return cached
+    }
+  }
 
   // 显示加载
   if (showLoading) {
@@ -192,6 +207,12 @@ async function request<T = any>(options: RequestOptions): Promise<T> {
       }
 
       throw new Error(errorMsg)
+    }
+
+    // GET 请求成功且启用缓存时，写入缓存
+    if (method === 'GET' && useCache) {
+      cache.set(url, res.data, cacheTTL)
+      console.log(`[Request] 已缓存: ${url}`)
     }
 
     return res.data

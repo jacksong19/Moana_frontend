@@ -18,19 +18,29 @@
     >
       <swiper-item v-for="(page, index) in content.pages" :key="index">
         <view class="story-page">
-          <!-- 全屏故事图片 -->
+          <!-- 全屏故事图片 - 渐进式加载 -->
           <view class="story-image-container">
+            <!-- 缩略图（模糊背景，立即显示） -->
+            <image
+              v-if="page.image_thumb_url && !imageLoaded[index]"
+              class="story-image story-image-thumb"
+              :src="page.image_thumb_url"
+              mode="aspectFit"
+            />
+
+            <!-- 原图（淡入效果） -->
             <image
               v-if="page.image_url"
-              class="story-image"
+              class="story-image story-image-full"
               :class="{ loaded: imageLoaded[index] }"
               :src="page.image_url"
               mode="aspectFit"
               @load="onImageLoad(index)"
               @error="onImageError(index)"
             />
-            <!-- 图片加载占位 - 柔和的渐变 -->
-            <view v-if="!imageLoaded[index]" class="image-placeholder">
+
+            <!-- 图片加载占位（无缩略图时显示） -->
+            <view v-if="!page.image_thumb_url && !imageLoaded[index]" class="image-placeholder">
               <view class="placeholder-shimmer"></view>
             </view>
           </view>
@@ -168,6 +178,7 @@ import { useContentStore } from '@/stores/content'
 import { startPlay, updateProgress, completePlay, submitInteraction } from '@/api/play'
 import timeLimitManager from '@/utils/time-limit'
 import { generatePoster, savePosterToAlbum } from '@/utils/poster'
+import perf from '@/utils/performance'
 import type { PictureBook, PictureBookPage } from '@/api/content'
 
 const childStore = useChildStore()
@@ -292,6 +303,11 @@ function handleTap() {
 function onImageLoad(index: number) {
   imageLoaded.value[index] = true
 
+  // 首图加载性能埋点
+  if (index === 0) {
+    perf.measure('首图加载时间', 'pageLoad')
+  }
+
   // 首页加载完成后显示卡片
   if (index === currentPage.value && !cardVisible.value) {
     setTimeout(() => {
@@ -307,7 +323,7 @@ function onImageError(index: number) {
   imageLoaded.value[index] = true
 }
 
-// 智能预加载 - 更激进的预加载策略
+// 智能预加载 - 缩略图优先，原图延迟错开
 function preloadAdjacentImages(centerIndex: number, range = 3) {
   if (!content.value?.pages?.length) return
 
@@ -319,17 +335,27 @@ function preloadAdjacentImages(centerIndex: number, range = 3) {
   // 也预加载前一页（用于回退）
   if (centerIndex > 0) indices.unshift(centerIndex - 1)
 
-  indices.forEach(index => {
-    if (!imageLoaded.value[index]) {
-      const page = content.value!.pages[index]
-      if (page.image_url) {
-        // 使用 downloadFile 真正下载图片到本地缓存
+  indices.forEach((index, offset) => {
+    const page = content.value!.pages[index]
+
+    // 1. 优先预加载缩略图（小文件，快速显示）
+    if (page.image_thumb_url) {
+      uni.getImageInfo({
+        src: page.image_thumb_url,
+        success: () => console.log(`[预加载] 缩略图 ${index + 1} 完成`),
+        fail: () => { /* 静默失败 */ }
+      })
+    }
+
+    // 2. 延迟预加载原图（避免带宽竞争，错开请求时间）
+    if (!imageLoaded.value[index] && page.image_url) {
+      setTimeout(() => {
         uni.downloadFile({
           url: page.image_url,
           success: (res) => {
             if (res.statusCode === 200) {
               imageLoaded.value[index] = true
-              console.log(`[预加载] 图片 ${index + 1} 完成`)
+              console.log(`[预加载] 原图 ${index + 1} 完成`)
             }
           },
           fail: () => {
@@ -341,7 +367,7 @@ function preloadAdjacentImages(centerIndex: number, range = 3) {
             })
           }
         })
-      }
+      }, 200 * offset)  // 每张图片错开 200ms
     }
   })
 }
@@ -734,6 +760,7 @@ async function loadContent() {
     console.log('[loadContent] 使用临时存储数据')
     content.value = tempBook
     uni.removeStorageSync('temp_picture_book')
+    perf.measure('数据加载（临时存储）', 'pageLoad')
     initAfterLoad()
     loading.value = false
     return
@@ -745,6 +772,7 @@ async function loadContent() {
   if (storeContent && (!contentId.value || storeContent.id === contentId.value)) {
     console.log('[loadContent] 使用 store 数据, ID:', storeContent.id)
     content.value = storeContent
+    perf.measure('数据加载（Store 缓存）', 'pageLoad')
     initAfterLoad()
     loading.value = false
     return
@@ -759,6 +787,7 @@ async function loadContent() {
   try {
     await contentStore.fetchContentDetail(contentId.value)
     content.value = contentStore.currentContent as PictureBook
+    perf.measure('API 响应时间', 'pageLoad')
     initAfterLoad()
   } catch (e) {
     uni.showToast({ title: '加载失败', icon: 'none' })
@@ -824,6 +853,10 @@ async function startPlaySession() {
 
 // 生命周期
 onLoad((options) => {
+  // 性能监控：页面加载开始
+  perf.clear()
+  perf.mark('pageLoad')
+
   contentId.value = options?.id || ''
 
   const sysInfo = uni.getSystemInfoSync()
@@ -933,9 +966,27 @@ $font-story: -apple-system, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
 .story-image {
   width: 100%;
   height: 100%;
-  opacity: 0;
-  transition: opacity 0.6s ease;
   object-fit: contain;
+}
+
+// 缩略图样式 - 模糊放大背景
+.story-image-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(20rpx);
+  transform: scale(1.05);
+  z-index: 1;
+}
+
+// 原图样式 - 淡入效果
+.story-image-full {
+  position: relative;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
 
   &.loaded {
     opacity: 1;

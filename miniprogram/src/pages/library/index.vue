@@ -115,9 +115,9 @@
                 />
               </swiper-item>
             </swiper>
-            <!-- 视频类型：无声自动播放预览 -->
+            <!-- 视频类型或有视频的儿歌：无声自动播放预览 -->
             <video
-              v-else-if="inferContentType(item) === 'video' && (item as any).video_url"
+              v-else-if="(inferContentType(item) === 'video' || inferContentType(item) === 'nursery_rhyme') && (item as any).video_url"
               :src="(item as any).video_url"
               :autoplay="true"
               :loop="true"
@@ -132,17 +132,17 @@
               class="cover-video"
               @error="(e: any) => console.error('[video preview] 加载失败:', item.title, e)"
             />
-            <!-- 其他类型或无详情：显示封面图 -->
+            <!-- 有封面图：显示封面（绘本优先缩略图，儿歌优先原图） -->
             <image
-              v-else-if="item.cover_url"
-              :src="item.cover_url"
+              v-else-if="getCoverUrl(item)"
+              :src="getCoverUrl(item)"
               mode="aspectFill"
               class="cover-img"
               lazy-load
               @load="onImageLoad(item.id)"
               @error="onImageError(item.id)"
             />
-            <!-- 无封面：显示占位符 -->
+            <!-- 无封面也无视频：显示占位符 -->
             <view v-else class="cover-placeholder">
               <text>{{ getTypeIcon(inferContentType(item)) }}</text>
             </view>
@@ -679,6 +679,17 @@ function inferContentType(item: any): string {
   if (item.video_url) return 'video'
   if (item.audio_url && !item.pages) return 'nursery_rhyme'
   return 'picture_book'
+}
+
+// 获取封面 URL（列表页优先使用缩略图以加快加载）
+function getCoverUrl(item: any): string {
+  const contentType = inferContentType(item)
+  // 绘本优先使用缩略图（8KB vs 45KB+）
+  if (contentType === 'picture_book') {
+    return item.cover_thumb_url || item.cover_url || ''
+  }
+  // 儿歌优先使用 cover_url，其次 suno_cover_url
+  return item.cover_url || item.suno_cover_url || ''
 }
 
 function getTypeIcon(type: string) {
