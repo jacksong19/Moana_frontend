@@ -115,23 +115,56 @@
                 />
               </swiper-item>
             </swiper>
-            <!-- 视频类型或有视频的儿歌：无声自动播放预览 -->
-            <video
+            <!-- 视频类型或有视频的儿歌：点击播放预览（优化流量消耗） -->
+            <view
               v-else-if="(inferContentType(item) === 'video' || inferContentType(item) === 'nursery_rhyme') && (item as any).video_url"
-              :src="(item as any).video_url"
-              :autoplay="true"
-              :loop="true"
-              :muted="true"
-              :controls="false"
-              :show-play-btn="false"
-              :show-center-play-btn="false"
-              :show-fullscreen-btn="false"
-              :show-progress="false"
-              :enable-progress-gesture="false"
-              object-fit="cover"
-              class="cover-video"
-              @error="(e: any) => console.error('[video preview] 加载失败:', item.title, e)"
-            />
+              class="video-preview-container"
+              @tap.stop="toggleVideoPreview(item, $event)"
+            >
+              <!-- 正在播放时显示视频 -->
+              <video
+                v-if="isVideoPlaying(item.id)"
+                :src="(item as any).video_url"
+                :autoplay="true"
+                :loop="true"
+                :muted="true"
+                :controls="false"
+                :show-play-btn="false"
+                :show-center-play-btn="false"
+                :show-fullscreen-btn="false"
+                :show-progress="false"
+                :enable-progress-gesture="false"
+                object-fit="cover"
+                class="cover-video"
+                @error="(e: any) => console.error('[video preview] 加载失败:', item.title, e)"
+              />
+              <!-- 未播放时显示封面 -->
+              <template v-else>
+                <image
+                  v-if="getCoverUrl(item)"
+                  :src="getCoverUrl(item)"
+                  mode="aspectFill"
+                  class="cover-img"
+                  lazy-load
+                  @load="onImageLoad(item.id)"
+                  @error="onImageError(item.id)"
+                />
+                <view v-else class="cover-placeholder">
+                  <text>{{ getTypeIcon(inferContentType(item)) }}</text>
+                </view>
+                <!-- 视频预览播放按钮 -->
+                <view class="video-preview-btn">
+                  <view class="preview-btn-ring"></view>
+                  <text class="preview-btn-icon">▶</text>
+                </view>
+              </template>
+              <!-- 播放中标识 -->
+              <view v-if="isVideoPlaying(item.id)" class="video-playing-indicator">
+                <view class="playing-bar b1"></view>
+                <view class="playing-bar b2"></view>
+                <view class="playing-bar b3"></view>
+              </view>
+            </view>
             <!-- 有封面图：显示封面（绘本优先缩略图，儿歌优先原图） -->
             <image
               v-else-if="getCoverUrl(item)"
@@ -626,6 +659,9 @@ const hasMore = ref(true)
 
 const imageLoaded = ref<Record<string, boolean>>({})
 
+// 视频预览播放状态：记录当前正在播放预览的视频 ID
+const videoPreviewId = ref<string | null>(null)
+
 const showAssetModal = ref(false)
 const assetLoading = ref(false)
 const currentAssetDetails = ref<AssetDetailsResponse | null>(null)
@@ -644,8 +680,9 @@ function onImageError(id: string) {
 
 function needsLoading(item: any): boolean {
   const contentType = inferContentType(item)
-  if (contentType === 'video') {
-    return false
+  // 视频类型也需要加载状态（显示封面）
+  if (contentType === 'video' && (item as any).video_url) {
+    return true
   }
   if (contentType === 'picture_book' && item.pages && item.pages.length > 0) {
     return true
@@ -654,6 +691,23 @@ function needsLoading(item: any): boolean {
     return true
   }
   return false
+}
+
+// 切换视频预览播放状态
+function toggleVideoPreview(item: any, event: Event) {
+  event.stopPropagation()
+  if (videoPreviewId.value === item.id) {
+    // 点击正在播放的视频，停止播放
+    videoPreviewId.value = null
+  } else {
+    // 切换到新视频
+    videoPreviewId.value = item.id
+  }
+}
+
+// 检查视频是否正在预览播放
+function isVideoPlaying(itemId: string): boolean {
+  return videoPreviewId.value === itemId
 }
 
 const contentList = computed(() => {
@@ -1540,6 +1594,88 @@ onShow(() => {
   width: 100%;
   height: 220rpx;
   pointer-events: none;
+}
+
+// 视频预览容器
+.video-preview-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+// 视频预览播放按钮
+.video-preview-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+
+  .preview-btn-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.2);
+  }
+
+  .preview-btn-icon {
+    position: relative;
+    font-size: 28rpx;
+    color: $video-primary;
+    margin-left: 4rpx;
+  }
+}
+
+// 视频播放中指示器
+.video-playing-indicator {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+  display: flex;
+  align-items: flex-end;
+  gap: 4rpx;
+  padding: 8rpx 12rpx;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 20rpx;
+  z-index: 10;
+
+  .playing-bar {
+    width: 6rpx;
+    background: #fff;
+    border-radius: 3rpx;
+    animation: playingBars 0.8s ease-in-out infinite;
+
+    &.b1 {
+      height: 12rpx;
+      animation-delay: 0s;
+    }
+
+    &.b2 {
+      height: 18rpx;
+      animation-delay: 0.2s;
+    }
+
+    &.b3 {
+      height: 14rpx;
+      animation-delay: 0.4s;
+    }
+  }
+}
+
+@keyframes playingBars {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.5);
+  }
 }
 
 .cover-swiper {
