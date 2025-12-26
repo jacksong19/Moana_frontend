@@ -7,6 +7,7 @@
         :src="video.video_url"
         :poster="video.cover_url"
         :autoplay="true"
+        :loop="true"
         :controls="true"
         :show-fullscreen-btn="true"
         :show-play-btn="true"

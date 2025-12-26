@@ -556,10 +556,12 @@ function stopCurrentAudio() {
 async function goToNextPage() {
   if (!isPlaying.value) return
 
-  const nextPage = currentPage.value + 1
+  let nextPage = currentPage.value + 1
+
+  // 循环播放：最后一页后回到第一页
   if (nextPage >= totalPages.value) {
-    handleComplete()
-    return
+    nextPage = 0
+    console.log('[绘本] 循环播放：回到第一页')
   }
 
   // 等待下一页图片加载完成（最多等 3 秒）

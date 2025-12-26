@@ -1007,8 +1007,11 @@ function initAudio() {
   })
 
   audioContext.onEnded(() => {
-    isPlaying.value = false
-    currentTime.value = duration.value
+    // 循环播放：重置到开头并继续播放
+    currentTime.value = 0
+    currentLyricIndex.value = 0
+    audioContext?.seek(0)
+    audioContext?.play()
   })
 
   audioContext.onTimeUpdate(() => {
