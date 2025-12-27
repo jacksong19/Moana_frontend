@@ -26,3 +26,13 @@ export function getChildSettings(childId: string): Promise<ChildSettings> {
 export function updateChildSettings(childId: string, settings: Partial<ChildSettings>): Promise<ChildSettings> {
   return request.put(`/child/${childId}/settings`, settings)
 }
+
+// 更新孩子信息
+export function updateChild(childId: string, data: {
+  name?: string
+  birth_date?: string
+  interests?: string[]
+  favorite_characters?: string[]
+}): Promise<Child> {
+  return request.put(`/child/${childId}`, data)
+}

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getChildren, getChildSettings, updateChildSettings as apiUpdateSettings, addChild as apiAddChild } from '@/api/child'
+import { getChildren, getChildSettings, updateChildSettings as apiUpdateSettings, addChild as apiAddChild, updateChild as apiUpdateChild } from '@/api/child'
 import { getTodayStats } from '@/api/play'
 import type { Child, ChildSettings } from '@/api/types'
 
@@ -95,6 +95,18 @@ export const useChildStore = defineStore('child', () => {
     return child
   }
 
+  async function updateChild(childId: string, data: { name?: string; birth_date?: string; interests?: string[]; favorite_characters?: string[] }) {
+    const updatedChild = await apiUpdateChild(childId, data)
+    const index = children.value.findIndex(c => c.id === childId)
+    if (index !== -1) {
+      children.value[index] = updatedChild
+    }
+    if (currentChild.value?.id === childId) {
+      currentChild.value = updatedChild
+    }
+    return updatedChild
+  }
+
   return {
     children,
     currentChild,
@@ -107,6 +119,7 @@ export const useChildStore = defineStore('child', () => {
     fetchSettings,
     updateSettings,
     fetchTodayDuration,
-    addChild
+    addChild,
+    updateChild
   }
 })
