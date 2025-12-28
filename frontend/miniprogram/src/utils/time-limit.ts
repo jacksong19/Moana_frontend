@@ -51,32 +51,14 @@ class TimeLimitManager {
 
   /**
    * 检查时间限制
+   * 注意：时间限制功能已改为"仅记录模式"，不再强制停止播放
+   * 所有播放时长控制由家长自行管理
    */
   checkLimits(): TimeLimitResult {
     const childStore = useChildStore()
     const settings = childStore.settings
-    const sessionMinutes = this.getSessionMinutes()
-    const totalMinutes = childStore.todayDuration + sessionMinutes
 
-    // 检查每日限制
-    if (totalMinutes >= settings.daily_limit_minutes) {
-      return {
-        exceeded: true,
-        type: 'daily',
-        message: '今天的学习时间已经够啦，明天再来吧！'
-      }
-    }
-
-    // 检查单次限制
-    if (sessionMinutes >= settings.session_limit_minutes) {
-      return {
-        exceeded: true,
-        type: 'session',
-        message: '已经看了很久了，让眼睛休息一下吧！'
-      }
-    }
-
-    // 休息提醒（每 10 分钟）
+    // 休息提醒（每 10 分钟）- 仅提醒，不强制
     if (settings.rest_reminder_enabled) {
       const timeSinceReminder = Date.now() - this.lastReminderTime
       if (timeSinceReminder >= this.reminderInterval) {
@@ -89,6 +71,7 @@ class TimeLimitManager {
       }
     }
 
+    // 不再强制停止播放，只做时长记录
     return {
       exceeded: false,
       message: ''

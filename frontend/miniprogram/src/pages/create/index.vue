@@ -191,7 +191,7 @@
             <textarea
               v-model="aiInput"
               class="smart-textarea"
-              placeholder="例如：宝宝最近不爱吃蔬菜，帮我做一个关于吃蔬菜的绘本"
+              :placeholder="currentPlaceholder"
               :maxlength="200"
               auto-height
             />
@@ -205,19 +205,17 @@
             <view class="tags-label">
               <text class="label-icon">💡</text>
               <text class="label-text">快捷灵感</text>
+              <text class="label-count">{{ inspirationItems.length }} 个主题</text>
             </view>
             <view class="tags-list">
-              <view class="tag-item" @tap="fillTip('宝宝不爱刷牙，需要一个刷牙主题的绘本')">
-                <text class="tag-emoji">🦷</text>
-                <text class="tag-text">刷牙习惯</text>
-              </view>
-              <view class="tag-item" @tap="fillTip('做一首认识小动物的儿歌')">
-                <text class="tag-emoji">🐰</text>
-                <text class="tag-text">认识动物</text>
-              </view>
-              <view class="tag-item" @tap="fillTip('宝宝不愿意和小朋友分享玩具')">
-                <text class="tag-emoji">🎁</text>
-                <text class="tag-text">学会分享</text>
+              <view
+                v-for="(item, index) in inspirationItems"
+                :key="index"
+                class="tag-item"
+                @tap="fillTip(item.prompt)"
+              >
+                <text class="tag-emoji">{{ item.emoji }}</text>
+                <text class="tag-text">{{ item.text }}</text>
               </view>
             </view>
           </view>
@@ -261,6 +259,67 @@ const aiInput = ref('')
 
 const childName = computed(() => childStore.currentChild?.name || '宝贝')
 
+// 占位符示例池（不带内容类型预设）
+const placeholderExamples = [
+  '例如：宝宝最近不爱吃蔬菜，需要培养吃蔬菜的好习惯',
+  '例如：宝宝不爱刷牙，帮我做一个关于刷牙习惯的内容',
+  '例如：宝宝晚上不愿意睡觉，需要建立早睡早起的作息',
+  '例如：宝宝不愿意和小朋友分享玩具，需要学会分享',
+  '例如：宝宝胆小害羞，需要培养勇敢自信的性格',
+  '例如：教宝宝认识各种小动物及它们的特点',
+  '例如：宝宝容易发脾气，需要学会管理情绪',
+  '例如：教宝宝安全过马路，遵守交通规则',
+  '例如：带宝宝来一场充满想象力的太空冒险',
+  '例如：教宝宝学会说谢谢、对不起等礼貌用语'
+]
+
+// 当前显示的占位符
+const currentPlaceholder = ref('')
+
+// 随机选择占位符
+function randomizePlaceholder() {
+  const randomIndex = Math.floor(Math.random() * placeholderExamples.length)
+  currentPlaceholder.value = placeholderExamples[randomIndex]
+}
+
+// 快捷灵感数据（25个，精简版）
+const inspirationItems = [
+  // 生活习惯类 (5)
+  { emoji: '🦷', text: '刷牙习惯', prompt: '宝宝不爱刷牙，需要培养刷牙的好习惯' },
+  { emoji: '🥦', text: '吃蔬菜', prompt: '宝宝不爱吃蔬菜，帮我做一个关于吃蔬菜的内容' },
+  { emoji: '🛏', text: '早睡早起', prompt: '宝宝晚上不愿意睡觉，需要建立作息规律' },
+  { emoji: '🚿', text: '洗澡洗手', prompt: '教宝宝养成爱干净的好习惯' },
+  { emoji: '🧸', text: '收拾玩具', prompt: '教宝宝学会收拾玩具，养成整理的习惯' },
+
+  // 情绪社交类 (5)
+  { emoji: '🖐', text: '学会分享', prompt: '宝宝不愿意和小朋友分享玩具' },
+  { emoji: '👭', text: '交朋友', prompt: '帮助宝宝学会如何交朋友，融入集体' },
+  { emoji: '💬', text: '礼貌用语', prompt: '教宝宝学会说谢谢、对不起等礼貌用语' },
+  { emoji: '😌', text: '情绪管理', prompt: '宝宝容易发脾气，帮助学会管理情绪' },
+  { emoji: '💪', text: '勇敢自信', prompt: '宝宝胆小害羞，需要培养勇敢自信的性格' },
+
+  // 认知学习类 (7)
+  { emoji: '🐰', text: '认识动物', prompt: '帮宝宝认识各种小动物及它们的特点' },
+  { emoji: '🎨', text: '认识颜色', prompt: '教宝宝认识和区分各种颜色' },
+  { emoji: '🔢', text: '学习数数', prompt: '用有趣的方式教宝宝学会数数' },
+  { emoji: '🔺', text: '认识形状', prompt: '教宝宝认识圆形、三角形、正方形等形状' },
+  { emoji: '🌈', text: '认识天气', prompt: '教宝宝认识晴天、雨天、雪天等天气' },
+  { emoji: '🍊', text: '认识水果', prompt: '带宝宝认识各种水果的名称和特征' },
+  { emoji: '🏠', text: '认识家人', prompt: '教宝宝认识家庭成员和亲情关系' },
+
+  // 安全教育类 (3)
+  { emoji: '🚦', text: '过马路', prompt: '教宝宝安全过马路，遵守交通规则' },
+  { emoji: '👨‍👩‍👧', text: '不跟陌生人', prompt: '教育宝宝不要跟陌生人走，保护自己' },
+  { emoji: '🔥', text: '防火安全', prompt: '教宝宝认识火灾危险，学会基本的防火知识' },
+
+  // 想象探索类 (5)
+  { emoji: '🚀', text: '太空冒险', prompt: '带宝宝来一场充满想象力的太空冒险' },
+  { emoji: '🐠', text: '海底世界', prompt: '探索神奇的海底世界，认识海洋生物' },
+  { emoji: '🌲', text: '森林探险', prompt: '在魔法森林里展开一场奇妙的冒险' },
+  { emoji: '🦕', text: '恐龙世界', prompt: '穿越到恐龙时代，认识各种恐龙' },
+  { emoji: '👸', text: '童话王国', prompt: '走进美丽的童话王国，遇见童话人物' }
+]
+
 function goBack() {
   uni.navigateBack({
     fail: () => {
@@ -293,7 +352,8 @@ async function handleAICreate() {
 }
 
 onShow(() => {
-  // 页面显示时的逻辑
+  // 每次进入页面时随机选择占位符
+  randomizePlaceholder()
 })
 </script>
 
@@ -1160,6 +1220,15 @@ onShow(() => {
   font-weight: 500;
 }
 
+.label-count {
+  margin-left: auto;
+  font-size: 20rpx;
+  color: $text-placeholder;
+  background: rgba($primary, 0.06);
+  padding: 4rpx 12rpx;
+  border-radius: $radius-full;
+}
+
 .tags-list {
   display: flex;
   flex-wrap: wrap;
@@ -1169,26 +1238,24 @@ onShow(() => {
 .tag-item {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 14rpx 24rpx;
+  gap: 6rpx;
+  padding: 12rpx 16rpx;
   background: $bg-soft;
   border: 1rpx solid $border-light;
   border-radius: $radius-full;
-  transition: all 0.2s ease;
 
   &:active {
-    transform: scale(0.95);
     background: rgba($primary, 0.08);
-    border-color: rgba($primary, 0.2);
+    border-color: $primary-light;
   }
 }
 
 .tag-emoji {
-  font-size: 24rpx;
+  font-size: 20rpx;
 }
 
 .tag-text {
-  font-size: 26rpx;
+  font-size: 24rpx;
   color: $text-secondary;
 }
 

@@ -20,79 +20,25 @@
         </view>
 
         <view class="setting-card">
-          <!-- 每日限制 -->
-          <view class="setting-item">
-            <view class="setting-info">
-              <text class="setting-label">每日观看限制</text>
-              <text class="setting-desc">设置每天最多观看时长</text>
-            </view>
-            <view class="setting-control">
-              <text class="control-value">{{ settings.daily_limit_minutes }} 分钟</text>
-              <text class="control-arrow">›</text>
-            </view>
-          </view>
-
-          <!-- 滑块调节 -->
-          <view class="slider-control">
-            <slider
-              :value="settings.daily_limit_minutes"
-              :min="15"
-              :max="120"
-              :step="15"
-              activeColor="#FF6B6B"
-              backgroundColor="#FFE4D4"
-              block-color="#FF6B6B"
-              @change="onDailyLimitChange"
-            />
-            <view class="slider-labels">
-              <text>15分钟</text>
-              <text>120分钟</text>
-            </view>
-          </view>
-
-          <view class="divider"></view>
-
-          <!-- 单次限制 -->
-          <view class="setting-item">
-            <view class="setting-info">
-              <text class="setting-label">单次观看限制</text>
-              <text class="setting-desc">每次连续观看的最长时间</text>
-            </view>
-            <view class="setting-control">
-              <text class="control-value">{{ settings.session_limit_minutes }} 分钟</text>
-            </view>
-          </view>
-
-          <view class="slider-control">
-            <slider
-              :value="settings.session_limit_minutes"
-              :min="10"
-              :max="30"
-              :step="5"
-              activeColor="#4ECDC4"
-              backgroundColor="#D4F5F3"
-              block-color="#4ECDC4"
-              @change="onSessionLimitChange"
-            />
-            <view class="slider-labels">
-              <text>10分钟</text>
-              <text>30分钟</text>
-            </view>
-          </view>
-
-          <view class="divider"></view>
-
           <!-- 休息提醒 -->
           <view class="setting-item">
             <view class="setting-info">
               <text class="setting-label">休息提醒</text>
-              <text class="setting-desc">每 10 分钟提醒休息眼睛</text>
+              <text class="setting-desc">每 10 分钟温馨提醒休息眼睛</text>
             </view>
             <switch
               :checked="settings.rest_reminder_enabled"
               color="#FF6B6B"
               @change="onRestReminderChange"
             />
+          </view>
+
+          <view class="divider"></view>
+
+          <!-- 说明 -->
+          <view class="setting-note">
+            <text class="note-icon">💡</text>
+            <text class="note-text">观看时长由家长自行管理，系统仅记录使用情况</text>
           </view>
         </view>
       </view>
@@ -399,6 +345,27 @@ onMounted(() => {
   height: 1rpx;
   background: $uni-border-color;
   margin: 0 $spacing-md;
+}
+
+.setting-note {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-xs;
+  padding: $spacing-md;
+  background: rgba($primary, 0.05);
+  border-radius: $radius-sm;
+  margin: $spacing-sm $spacing-md $spacing-md;
+
+  .note-icon {
+    font-size: $font-md;
+    flex-shrink: 0;
+  }
+
+  .note-text {
+    font-size: $font-sm;
+    color: $text-secondary;
+    line-height: 1.5;
+  }
 }
 
 // 统计卡片

@@ -720,7 +720,10 @@ const protagonistAnimals = [
   { value: 'cat' as ProtagonistAnimal, label: '小猫咪', emoji: '🐱' },
   { value: 'dog' as ProtagonistAnimal, label: '小狗狗', emoji: '🐶' },
   { value: 'panda' as ProtagonistAnimal, label: '熊猫', emoji: '🐼' },
-  { value: 'fox' as ProtagonistAnimal, label: '小狐狸', emoji: '🦊' }
+  { value: 'fox' as ProtagonistAnimal, label: '小狐狸', emoji: '🦊' },
+  { value: 'elephant' as ProtagonistAnimal, label: '小象', emoji: '🐘' },
+  { value: 'penguin' as ProtagonistAnimal, label: '企鹅', emoji: '🐧' },
+  { value: 'monkey' as ProtagonistAnimal, label: '小猴子', emoji: '🐵' }
 ]
 const selectedAnimal = ref<ProtagonistAnimal>('bunny')
 
@@ -1023,10 +1026,14 @@ function previewVoice(voiceId: VoiceId) {
   // 停止之前的播放
   stopPreview()
 
+  // 设置加载状态
+  loadingVoiceId.value = voiceId
+
   // 找到对应音色的预览URL
   const voice = voiceOptions.value.find(v => v.id === voiceId)
   if (!voice?.preview_url) {
     uni.showToast({ title: '预览暂不可用', icon: 'none' })
+    loadingVoiceId.value = null
     return
   }
 
@@ -1040,7 +1047,9 @@ function playPreviewAudio(url: string, voiceId: VoiceId) {
   previewAudioContext.value = audioContext
 
   audioContext.src = url
-  audioContext.onPlay(() => {
+  audioContext.onCanplay(() => {
+    // 音频准备好后清除加载状态
+    loadingVoiceId.value = null
     playingVoiceId.value = voiceId
   })
   audioContext.onEnded(() => {
@@ -1049,6 +1058,7 @@ function playPreviewAudio(url: string, voiceId: VoiceId) {
   audioContext.onError((err) => {
     console.error('[playPreviewAudio] 播放错误:', err)
     playingVoiceId.value = null
+    loadingVoiceId.value = null
     uni.showToast({ title: '播放失败', icon: 'none' })
   })
   audioContext.play()
@@ -2893,8 +2903,16 @@ onUnmounted(() => {
 
 .option-cards {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: $spacing-xs;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8rpx;
+
+  // 隐藏滚动条但保持可滚动
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .option-card {
@@ -2907,6 +2925,7 @@ onUnmounted(() => {
   border: 2rpx solid transparent;
   transition: all $duration-fast $ease-bounce;
   min-width: 140rpx;
+  flex-shrink: 0;
 
   &.selected {
     background: rgba($book-primary, 0.1);
