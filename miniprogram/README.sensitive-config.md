@@ -15,9 +15,8 @@
    - 根据需要调整项目名称和设置
 
 3. **src/manifest.json**
-   - 打开 `src/manifest.json`
-   - 找到 `mp-weixin.appid` 字段
-   - 将空字符串替换为你的微信小程序 AppID
+   - 复制 `src/manifest.json.template` 为 `src/manifest.json`
+   - 将 `mp-weixin.appid` 的 `YOUR_WECHAT_APPID_HERE` 替换为你的微信小程序 AppID
 
 ### 快速设置
 
@@ -28,10 +27,11 @@ cd miniprogram
 # 复制配置模板
 cp project.config.json.template project.config.json
 cp project.private.config.json.template project.private.config.json
+cp src/manifest.json.template src/manifest.json
 
 # 使用你喜欢的编辑器修改 AppID
 # 1. 编辑 project.config.json，将 YOUR_WECHAT_APPID_HERE 替换为真实 AppID
-# 2. 编辑 src/manifest.json，将 mp-weixin.appid 的空字符串替换为真实 AppID
+# 2. 编辑 src/manifest.json，将 mp-weixin.appid 的 YOUR_WECHAT_APPID_HERE 替换为真实 AppID
 ```
 
 ### 重要提示
