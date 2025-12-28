@@ -31,7 +31,7 @@ export const useChildStore = defineStore('child', () => {
   })
 
   const currentChildAgeMonths = computed(() => {
-    if (!currentChild.value?.birth_date) return 24 // 默认 2 岁
+    if (!currentChild.value?.birth_date) return 0
     const birth = new Date(currentChild.value.birth_date)
     const now = new Date()
     return (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())

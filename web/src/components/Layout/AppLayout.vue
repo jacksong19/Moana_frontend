@@ -1,13 +1,11 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-cream">
     <Sidebar />
     <MobileNav />
 
     <!-- 主内容区 -->
-    <main class="lg:pl-64 pt-14 lg:pt-0 pb-16 lg:pb-0">
-      <div class="p-4 lg:p-8">
-        <slot />
-      </div>
+    <main class="lg:pl-64 pt-14 lg:pt-0 pb-20 lg:pb-0">
+      <slot />
     </main>
   </div>
 </template>

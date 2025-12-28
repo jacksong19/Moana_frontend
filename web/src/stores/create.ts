@@ -34,8 +34,14 @@ export const useCreateStore = defineStore('create', () => {
 
   // ========== 绘本参数 ==========
   const pictureBookParams = ref({
+    // 创作模式：preset（预设主题）或 smart（智能创作）
+    creationMode: 'preset' as 'preset' | 'smart',
+    // 预设模式参数
     themeCategory: '',
     themeTopic: '',
+    // 智能模式参数
+    customPrompt: '',
+    // 共用参数
     artStyle: 'pixar_3d' as string,
     protagonist: {
       animal: 'bunny',
@@ -65,8 +71,14 @@ export const useCreateStore = defineStore('create', () => {
 
   // ========== 儿歌参数 ==========
   const nurseryRhymeParams = ref({
+    // 创作模式：preset（预设主题）或 smart（智能创作）
+    creationMode: 'preset' as 'preset' | 'smart',
+    // 预设模式参数
     themeCategory: '',
     themeTopic: '',
+    // 智能模式参数
+    customPrompt: '',
+    // 共用参数
     musicMood: 'cheerful',
     musicGenre: '' as string,
     tempo: 100,
@@ -168,8 +180,10 @@ export const useCreateStore = defineStore('create', () => {
 
     if (type === 'picture_book') {
       pictureBookParams.value = {
+        creationMode: 'preset',
         themeCategory: '',
         themeTopic: '',
+        customPrompt: '',
         artStyle: 'pixar_3d',
         protagonist: { animal: 'bunny', color: 'white', accessory: 'blue overalls' },
         colorPalette: 'pastel',
@@ -192,8 +206,10 @@ export const useCreateStore = defineStore('create', () => {
       }
     } else if (type === 'nursery_rhyme') {
       nurseryRhymeParams.value = {
+        creationMode: 'preset',
         themeCategory: '',
         themeTopic: '',
+        customPrompt: '',
         musicMood: 'cheerful',
         musicGenre: '',
         tempo: 100,
@@ -288,8 +304,16 @@ export const useCreateStore = defineStore('create', () => {
     if (!child) throw new Error('请先选择孩子')
 
     const params = pictureBookParams.value
-    if (!params.themeCategory || !params.themeTopic) {
-      throw new Error('请选择主题')
+
+    // 验证参数
+    if (params.creationMode === 'preset') {
+      if (!params.themeCategory || !params.themeTopic) {
+        throw new Error('请选择主题')
+      }
+    } else if (params.creationMode === 'smart') {
+      if (!params.customPrompt) {
+        throw new Error('请输入创意描述')
+      }
     }
 
     generatingStatus.value = 'pending'
@@ -308,14 +332,15 @@ export const useCreateStore = defineStore('create', () => {
       const response = await generatePictureBookAsync({
         child_name: child.name,
         age_months: childStore.currentChildAgeMonths,
-        theme_topic: params.themeTopic,
-        theme_category: params.themeCategory,
+        theme_topic: params.creationMode === 'preset' ? params.themeTopic : 'smart_creation',
+        theme_category: params.creationMode === 'preset' ? params.themeCategory : 'custom',
         favorite_characters: child.favorite_characters,
         voice_id: params.voiceId,
         art_style: params.artStyle as ArtStyle,
         protagonist: params.protagonist,
         color_palette: params.colorPalette as ColorPalette,
-        creation_mode: 'preset',
+        creation_mode: params.creationMode,
+        custom_prompt: params.creationMode === 'smart' ? params.customPrompt : undefined,
         story_enhancement: Object.keys(storyEnhancement).length > 0 ? storyEnhancement : undefined,
         visual_enhancement: Object.keys(visualEnhancement).length > 0 ? visualEnhancement : undefined
       })
@@ -338,8 +363,16 @@ export const useCreateStore = defineStore('create', () => {
     if (!child) throw new Error('请先选择孩子')
 
     const params = nurseryRhymeParams.value
-    if (!params.themeCategory || !params.themeTopic) {
-      throw new Error('请选择主题')
+
+    // 验证参数
+    if (params.creationMode === 'preset') {
+      if (!params.themeCategory || !params.themeTopic) {
+        throw new Error('请选择主题')
+      }
+    } else if (params.creationMode === 'smart') {
+      if (!params.customPrompt) {
+        throw new Error('请输入创意描述')
+      }
     }
 
     generatingStatus.value = 'pending'
@@ -350,10 +383,11 @@ export const useCreateStore = defineStore('create', () => {
       const response = await generateNurseryRhymeAsync({
         child_name: child.name,
         age_months: childStore.currentChildAgeMonths,
-        theme_topic: params.themeTopic,
-        theme_category: params.themeCategory,
+        theme_topic: params.creationMode === 'preset' ? params.themeTopic : 'smart_creation',
+        theme_category: params.creationMode === 'preset' ? params.themeCategory : 'custom',
         favorite_characters: child.favorite_characters,
-        creation_mode: 'preset',
+        creation_mode: params.creationMode,
+        custom_prompt: params.creationMode === 'smart' ? params.customPrompt : undefined,
         // 音乐风格
         music_mood: params.musicMood,
         music_genre: params.musicGenre || undefined,

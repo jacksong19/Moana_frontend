@@ -45,10 +45,10 @@ instance.interceptors.response.use(
           localStorage.removeItem('access_token')
           localStorage.removeItem('refresh_token')
           localStorage.removeItem('admin_token')
-          window.location.href = '/web/login'
+          window.location.href = '/login'
         }
       } else {
-        window.location.href = '/web/login'
+        window.location.href = '/login'
       }
     }
     return Promise.reject(error)

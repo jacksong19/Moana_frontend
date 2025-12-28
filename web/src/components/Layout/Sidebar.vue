@@ -1,56 +1,47 @@
 <template>
-  <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200">
+  <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-100 shadow-sm">
     <!-- Logo -->
-    <div class="flex items-center h-16 px-6 border-b border-gray-200">
-      <span class="text-xl font-bold text-primary-600">Moana</span>
-      <span class="ml-2 text-sm text-gray-500">家长管理</span>
+    <div class="flex items-center h-16 px-6 border-b border-gray-100">
+      <span class="text-2xl font-bold bg-gradient-to-r from-book via-song to-video bg-clip-text text-transparent">
+        Moana
+      </span>
+      <span class="ml-2 text-xs text-text-secondary bg-honey-light px-2 py-0.5 rounded-full">家长版</span>
     </div>
 
     <!-- 导航 -->
-    <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
       <router-link
         v-for="item in navItems"
         :key="item.path"
         :to="item.path"
-        class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+        class="flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all"
         :class="isActive(item.path)
-          ? 'bg-primary-50 text-primary-600'
-          : 'text-gray-600 hover:bg-gray-50'"
+          ? 'bg-honey text-white shadow-md'
+          : 'text-text-secondary hover:bg-cream hover:text-text-primary'"
       >
-        <span class="mr-3">{{ item.icon }}</span>
+        <span class="mr-3 text-lg">{{ item.icon }}</span>
         {{ item.name }}
       </router-link>
     </nav>
 
-    <!-- 底部：当前孩子 -->
-    <div class="p-4 border-t border-gray-200" v-if="childStore.currentChild">
-      <div class="flex items-center">
-        <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-medium">
-          {{ childStore.currentChild.name.charAt(0) }}
-        </div>
-        <div class="ml-3">
-          <p class="text-sm font-medium text-gray-900">{{ childStore.currentChild.name }}</p>
-          <p class="text-xs text-gray-500">{{ childStore.currentChildAge }}</p>
-        </div>
-      </div>
+    <!-- 底部：云朵装饰 -->
+    <div class="p-4 text-center text-4xl opacity-30">
+      ☁️ 🌈 ☁️
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { useChildStore } from '@/stores/child'
 
 const route = useRoute()
-const childStore = useChildStore()
 
 const navItems = [
-  { path: '/dashboard', name: '仪表盘', icon: '📊' },
+  { path: '/dashboard', name: '首页', icon: '🏠' },
   { path: '/create', name: '创作中心', icon: '✨' },
   { path: '/library', name: '内容库', icon: '📚' },
   { path: '/favorites', name: '收藏', icon: '❤️' },
-  { path: '/report', name: '学习报告', icon: '📈' },
-  { path: '/children', name: '孩子管理', icon: '👶' },
+  { path: '/children', name: '孩子', icon: '👶' },
   { path: '/settings', name: '设置', icon: '⚙️' },
 ]
 

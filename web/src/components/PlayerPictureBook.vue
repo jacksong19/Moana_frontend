@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import type { PictureBookPage } from '@/api/types'
 
 const props = defineProps<{
@@ -123,9 +123,10 @@ function goToPage(index: number) {
   currentPageIndex.value = index
 }
 
-function playCurrentAudio() {
+async function playCurrentAudio() {
+  await nextTick() // 等待 DOM 更新（src 属性变化）
   if (audioRef.value && currentPage.value?.audio_url) {
-    audioRef.value.currentTime = 0
+    audioRef.value.load() // 重新加载新的音频源
     audioRef.value.play().catch((err) => {
       console.warn('音频播放失败:', err)
     })
@@ -133,8 +134,13 @@ function playCurrentAudio() {
 }
 
 function onAudioEnded() {
-  // 音频播放完毕后可以自动翻页（可选）
-  // nextPage()
+  // 音频播放完毕后自动翻到下一页，最后一页循环回第一页
+  if (currentPageIndex.value < props.pages.length - 1) {
+    nextPage()
+  } else {
+    // 循环播放：回到第一页
+    currentPageIndex.value = 0
+  }
 }
 
 function onAudioError(e: Event) {

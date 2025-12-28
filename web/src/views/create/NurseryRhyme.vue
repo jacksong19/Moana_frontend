@@ -23,16 +23,77 @@
 
       <!-- 步骤内容 -->
       <div class="bg-white/80 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-xl">
-        <!-- 步骤 1：选择灵感 -->
+        <!-- 步骤 1：选择主题或输入描述 -->
         <div v-if="createStore.currentStep === 1">
-          <h2 class="text-xl font-bold text-gray-800 mb-6">选择儿歌主题</h2>
-          <ThemeSelector
-            :themes="createStore.themes"
-            :selected-category="createStore.nurseryRhymeParams.themeCategory"
-            :selected-topic="createStore.nurseryRhymeParams.themeTopic"
-            @update:selected-category="createStore.nurseryRhymeParams.themeCategory = $event"
-            @update:selected-topic="createStore.nurseryRhymeParams.themeTopic = $event"
-          />
+          <!-- 模式切换 -->
+          <div class="flex gap-4 mb-6">
+            <button
+              class="flex-1 py-3 px-4 rounded-2xl border-2 transition-all text-center"
+              :class="createStore.nurseryRhymeParams.creationMode === 'preset'
+                ? 'border-pink-500 bg-pink-50 text-pink-700'
+                : 'border-gray-200 text-gray-500 hover:border-pink-200'"
+              @click="createStore.nurseryRhymeParams.creationMode = 'preset'"
+            >
+              <div class="text-lg mb-1">🎶</div>
+              <div class="font-medium">预设主题</div>
+              <div class="text-xs opacity-70">从精选主题中选择</div>
+            </button>
+            <button
+              class="flex-1 py-3 px-4 rounded-2xl border-2 transition-all text-center"
+              :class="createStore.nurseryRhymeParams.creationMode === 'smart'
+                ? 'border-pink-500 bg-pink-50 text-pink-700'
+                : 'border-gray-200 text-gray-500 hover:border-pink-200'"
+              @click="createStore.nurseryRhymeParams.creationMode = 'smart'"
+            >
+              <div class="text-lg mb-1">✨</div>
+              <div class="font-medium">智能创作</div>
+              <div class="text-xs opacity-70">自由描述你的想法</div>
+            </button>
+          </div>
+
+          <!-- 预设模式：主题选择 -->
+          <div v-if="createStore.nurseryRhymeParams.creationMode === 'preset'">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">选择儿歌主题</h2>
+            <ThemeSelector
+              :themes="createStore.themes"
+              :selected-category="createStore.nurseryRhymeParams.themeCategory"
+              :selected-topic="createStore.nurseryRhymeParams.themeTopic"
+              @update:selected-category="createStore.nurseryRhymeParams.themeCategory = $event"
+              @update:selected-topic="createStore.nurseryRhymeParams.themeTopic = $event"
+            />
+          </div>
+
+          <!-- 智能模式：自由描述 -->
+          <div v-else>
+            <h2 class="text-xl font-bold text-gray-800 mb-6">描述你的创意</h2>
+            <textarea
+              v-model="createStore.nurseryRhymeParams.customPrompt"
+              rows="4"
+              class="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none text-lg"
+              placeholder="例如：一首关于刷牙的欢快儿歌..."
+            />
+            <div class="text-right text-sm text-gray-400 mt-2">
+              {{ createStore.nurseryRhymeParams.customPrompt?.length || 0 }}/200
+            </div>
+
+            <!-- 灵感标签 -->
+            <div class="mt-6">
+              <h3 class="text-sm font-medium text-gray-700 mb-3">快速灵感</h3>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="tag in inspirationTags"
+                  :key="tag.text"
+                  class="px-4 py-2 rounded-full text-sm border transition-all hover:shadow-md"
+                  :class="createStore.nurseryRhymeParams.customPrompt === tag.prompt
+                    ? 'bg-pink-100 border-pink-300 text-pink-700'
+                    : 'bg-white border-gray-200 text-gray-600 hover:border-pink-200'"
+                  @click="createStore.nurseryRhymeParams.customPrompt = tag.prompt"
+                >
+                  {{ tag.icon }} {{ tag.text }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 步骤 2：音乐参数 -->
@@ -144,8 +205,18 @@
               <h3 class="font-medium text-gray-800 mb-3">🎵 基础信息</h3>
               <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
+                  <span class="text-gray-500">创作模式：</span>
+                  <span class="text-gray-800">
+                    {{ createStore.nurseryRhymeParams.creationMode === 'preset' ? '🎶 预设主题' : '✨ 智能创作' }}
+                  </span>
+                </div>
+                <div v-if="createStore.nurseryRhymeParams.creationMode === 'preset'">
                   <span class="text-gray-500">主题：</span>
                   <span class="text-gray-800">{{ selectedThemeName }}</span>
+                </div>
+                <div v-else class="col-span-2">
+                  <span class="text-gray-500">创意描述：</span>
+                  <span class="text-gray-800">{{ createStore.nurseryRhymeParams.customPrompt }}</span>
                 </div>
                 <div>
                   <span class="text-gray-500">情绪：</span>
@@ -401,8 +472,22 @@ const advancedSettingsTags = computed(() => {
   return tags
 })
 
+// 灵感标签（智能模式使用）
+const inspirationTags = [
+  { icon: '🦷', text: '刷牙', prompt: '一首关于刷牙的欢快儿歌，让宝宝爱上刷牙' },
+  { icon: '🥬', text: '吃蔬菜', prompt: '一首关于吃蔬菜的儿歌，让宝宝不再挑食' },
+  { icon: '😴', text: '睡觉', prompt: '一首温柔的摇篮曲，帮助宝宝安心入睡' },
+  { icon: '🤝', text: '分享', prompt: '一首关于学会分享的儿歌' },
+  { icon: '🌈', text: '色彩', prompt: '一首教宝宝认识颜色的儿歌' },
+  { icon: '🔢', text: '数字', prompt: '一首教宝宝数数的儿歌' }
+]
+
 const canNextStep = computed(() => {
-  return !!createStore.nurseryRhymeParams.themeCategory && !!createStore.nurseryRhymeParams.themeTopic
+  if (createStore.nurseryRhymeParams.creationMode === 'preset') {
+    return !!createStore.nurseryRhymeParams.themeCategory && !!createStore.nurseryRhymeParams.themeTopic
+  } else {
+    return !!createStore.nurseryRhymeParams.customPrompt?.trim()
+  }
 })
 
 function handleAdvancedUpdate(key: string, value: any) {

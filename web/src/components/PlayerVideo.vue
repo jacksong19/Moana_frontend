@@ -37,6 +37,7 @@
         @pause="isPlaying = false"
         @click.stop="togglePlay"
         playsinline
+        loop
       />
 
       <!-- 中央播放按钮 -->
@@ -278,13 +279,9 @@ function onLoadedMetadata() {
 }
 
 function onEnded() {
+  // loop 属性会自动处理循环，这里仅作为备用
   isPlaying.value = false
   showControls.value = true
-  // 循环播放
-  if (videoRef.value) {
-    videoRef.value.currentTime = 0
-    videoRef.value.play().catch(() => {})
-  }
 }
 
 function onError(e: Event) {

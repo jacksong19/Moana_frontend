@@ -19,7 +19,7 @@
 
     <!-- 绘本播放器 -->
     <PlayerPictureBook
-      v-else-if="contentType === 'picture-book' && pictureBook"
+      v-else-if="pictureBook"
       :title="pictureBook.title"
       :pages="pictureBook.pages"
       @back="goBack"
@@ -27,7 +27,7 @@
 
     <!-- 儿歌播放器 -->
     <PlayerNurseryRhyme
-      v-else-if="contentType === 'nursery-rhyme' && nurseryRhyme"
+      v-else-if="nurseryRhyme"
       :title="nurseryRhyme.title"
       :audio-url="nurseryRhyme.audio_url"
       :cover-url="nurseryRhyme.cover_url || nurseryRhyme.suno_cover_url"
@@ -37,7 +37,7 @@
 
     <!-- 视频播放器 -->
     <PlayerVideo
-      v-else-if="contentType === 'video' && video"
+      v-else-if="video"
       :title="video.title"
       :video-url="video.video_url"
       :cover-url="video.cover_url"
@@ -75,23 +75,29 @@ const content = ref<PictureBook | NurseryRhyme | Video | null>(null)
 const contentType = computed(() => route.params.type as string)
 const contentId = computed(() => route.params.id as string)
 
+// 使用 content_type 字段判断类型（更可靠）
+const actualType = computed(() => {
+  const c = content.value as any
+  return c?.content_type || null
+})
+
 // 类型断言
 const pictureBook = computed(() => {
-  if (content.value && 'pages' in content.value) {
+  if (actualType.value === 'picture_book') {
     return content.value as PictureBook
   }
   return null
 })
 
 const nurseryRhyme = computed(() => {
-  if (content.value && 'lyrics' in content.value) {
+  if (actualType.value === 'nursery_rhyme') {
     return content.value as NurseryRhyme
   }
   return null
 })
 
 const video = computed(() => {
-  if (content.value && 'video_url' in content.value && !('lyrics' in content.value)) {
+  if (actualType.value === 'video') {
     return content.value as Video
   }
   return null

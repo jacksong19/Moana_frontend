@@ -1,133 +1,111 @@
 <template>
-  <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">仪表盘</h1>
-
-    <!-- 开始创作 -->
-    <div class="bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 rounded-2xl p-6 text-white shadow-lg">
-      <h2 class="text-lg font-bold mb-4 flex items-center">
-        <span class="mr-2">✨</span>
-        开始创作
-      </h2>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <router-link
-          to="/create/picture-book"
-          class="bg-white/20 hover:bg-white/30 rounded-xl p-4 text-center transition-colors"
-        >
-          <div class="text-3xl mb-2">📖</div>
-          <p class="font-medium">绘本创作</p>
-        </router-link>
-        <router-link
-          to="/create/nursery-rhyme"
-          class="bg-white/20 hover:bg-white/30 rounded-xl p-4 text-center transition-colors"
-        >
-          <div class="text-3xl mb-2">🎵</div>
-          <p class="font-medium">儿歌创作</p>
-        </router-link>
-        <router-link
-          to="/create/video"
-          class="bg-white/20 hover:bg-white/30 rounded-xl p-4 text-center transition-colors"
-        >
-          <div class="text-3xl mb-2">🎬</div>
-          <p class="font-medium">视频创作</p>
-        </router-link>
-        <router-link
-          to="/create/smart"
-          class="bg-white/20 hover:bg-white/30 rounded-xl p-4 text-center transition-colors"
-        >
-          <div class="text-3xl mb-2">🪄</div>
-          <p class="font-medium">智能创作</p>
-        </router-link>
-      </div>
-    </div>
-
-    <!-- 统计卡片 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <!-- 今日学习 -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-gray-500">今日学习</span>
-          <span class="text-2xl">📖</span>
-        </div>
-        <div class="text-2xl font-bold text-gray-900">
-          {{ childStore.todayDuration }} 分钟
-        </div>
-        <div class="mt-2">
-          <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              class="h-full bg-primary-500 rounded-full transition-all"
-              :style="{ width: `${Math.min(100, (childStore.todayDuration / childStore.settings.daily_limit_minutes) * 100)}%` }"
-            />
-          </div>
-          <p class="text-xs text-gray-500 mt-1">
-            限制 {{ childStore.settings.daily_limit_minutes }} 分钟
-          </p>
-        </div>
+  <div class="min-h-screen bg-cream">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+      <!-- 欢迎区域 -->
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold text-text-primary flex items-center gap-2">
+          <span class="text-3xl">👋</span>
+          <span>欢迎回来！</span>
+        </h1>
+        <p class="text-text-secondary mt-1">今天想给宝贝看点什么呢？</p>
       </div>
 
-      <!-- 内容统计 -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-gray-500">内容统计</span>
-          <span class="text-2xl">📚</span>
+      <!-- 统计卡片 -->
+      <div class="grid grid-cols-3 gap-4 mb-8">
+        <!-- 绘本统计 -->
+        <div class="bg-book-light rounded-2xl p-6 border-2 border-book/20 hover:border-book/40 transition-colors cursor-pointer" @click="goToLibrary('picture_book')">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-4xl font-bold text-book-dark">{{ stats.books }}</p>
+              <p class="text-text-secondary mt-1">本绘本</p>
+            </div>
+            <span class="text-5xl">📖</span>
+          </div>
         </div>
-        <div class="space-y-2">
-          <div class="flex justify-between">
-            <span class="text-gray-600">绘本</span>
-            <span class="font-medium">{{ stats.books }}</span>
+
+        <!-- 儿歌统计 -->
+        <div class="bg-song-light rounded-2xl p-6 border-2 border-song/20 hover:border-song/40 transition-colors cursor-pointer" @click="goToLibrary('nursery_rhyme')">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-4xl font-bold text-song-dark">{{ stats.songs }}</p>
+              <p class="text-text-secondary mt-1">首儿歌</p>
+            </div>
+            <span class="text-5xl">🎵</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">儿歌</span>
-            <span class="font-medium">{{ stats.songs }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">视频</span>
-            <span class="font-medium">{{ stats.videos }}</span>
+        </div>
+
+        <!-- 视频统计 -->
+        <div class="bg-video-light rounded-2xl p-6 border-2 border-video/20 hover:border-video/40 transition-colors cursor-pointer" @click="goToLibrary('video')">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-4xl font-bold text-video-dark">{{ stats.videos }}</p>
+              <p class="text-text-secondary mt-1">个视频</p>
+            </div>
+            <span class="text-5xl">🎬</span>
           </div>
         </div>
       </div>
 
-      <!-- 当前孩子 -->
-      <div class="card">
+      <!-- 最新创作 -->
+      <div class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <span class="text-gray-500">当前孩子</span>
-          <span class="text-2xl">👶</span>
+          <h2 class="text-xl font-bold text-text-primary flex items-center gap-2">
+            <span>✨</span>
+            <span>最新创作</span>
+          </h2>
+          <router-link to="/library" class="text-honey hover:text-honey-dark transition-colors text-sm font-medium">
+            查看全部 →
+          </router-link>
         </div>
-        <div v-if="childStore.currentChild" class="flex items-center">
-          <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 text-xl font-medium">
-            {{ childStore.currentChild.name.charAt(0) }}
-          </div>
-          <div class="ml-3">
-            <p class="font-medium text-gray-900">{{ childStore.currentChild.name }}</p>
-            <p class="text-sm text-gray-500">{{ childStore.currentChildAge }}</p>
-          </div>
+
+        <div v-if="loading" class="flex items-center justify-center py-12">
+          <div class="w-10 h-10 border-4 border-honey border-t-transparent rounded-full animate-spin"></div>
         </div>
-        <router-link
-          v-else
-          to="/children/add"
-          class="text-primary-600 hover:underline"
-        >
-          + 添加孩子
-        </router-link>
+
+        <div v-else-if="recentItems.length === 0" class="text-center py-12 bg-white rounded-2xl">
+          <div class="text-6xl mb-4">📭</div>
+          <p class="text-text-secondary">还没有内容哦</p>
+          <p class="text-text-light text-sm mt-1">去小程序创作第一个作品吧</p>
+        </div>
+
+        <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <ContentCard
+            v-for="item in recentItems"
+            :key="item.id"
+            :content="item"
+            @play="handlePlay(item)"
+            @delete="handleDelete(item)"
+          />
+        </div>
       </div>
 
-      <!-- 快捷操作 -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-gray-500">快捷操作</span>
-          <span class="text-2xl">🚀</span>
-        </div>
-        <div class="space-y-2">
+      <!-- 快速入口 -->
+      <div>
+        <h2 class="text-xl font-bold text-text-primary flex items-center gap-2 mb-4">
+          <span>🎯</span>
+          <span>快速入口</span>
+        </h2>
+        <div class="grid grid-cols-3 gap-4">
           <router-link
-            to="/library"
-            class="block px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            to="/library?type=picture_book"
+            class="flex items-center gap-3 bg-white rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all hover:-translate-y-1 border-l-4 border-book"
           >
-            查看内容库 →
+            <span class="text-3xl">📖</span>
+            <span class="font-medium text-text-primary">全部绘本</span>
           </router-link>
           <router-link
-            to="/report"
-            class="block px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            to="/library?type=nursery_rhyme"
+            class="flex items-center gap-3 bg-white rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all hover:-translate-y-1 border-l-4 border-song"
           >
-            查看报告 →
+            <span class="text-3xl">🎵</span>
+            <span class="font-medium text-text-primary">全部儿歌</span>
+          </router-link>
+          <router-link
+            to="/library?type=video"
+            class="flex items-center gap-3 bg-white rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all hover:-translate-y-1 border-l-4 border-video"
+          >
+            <span class="text-3xl">🎬</span>
+            <span class="font-medium text-text-primary">全部视频</span>
           </router-link>
         </div>
       </div>
@@ -136,20 +114,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useChildStore } from '@/stores/child'
-import { getContentList } from '@/api/content'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import ContentCard from '@/components/ContentCard.vue'
+import { getContentList, deleteContent } from '@/api/content'
+import type { Content } from '@/api/types'
 
-const childStore = useChildStore()
+const router = useRouter()
 
+const items = ref<Content[]>([])
+const loading = ref(true)
 const stats = ref({ books: 0, songs: 0, videos: 0 })
 
-onMounted(async () => {
-  await childStore.fetchChildren()
-  await childStore.fetchTodayDuration()
+// 最新内容（最多显示8个）
+const recentItems = computed(() => items.value.slice(0, 8))
 
-  // 获取内容统计
+async function fetchItems() {
+  loading.value = true
   try {
+    // 获取内容统计
     const [books, songs, videos] = await Promise.all([
       getContentList({ type: 'picture_book', limit: 1 }),
       getContentList({ type: 'nursery_rhyme', limit: 1 }),
@@ -160,8 +143,47 @@ onMounted(async () => {
       songs: songs.total,
       videos: videos.total,
     }
+
+    // 获取最新内容
+    const res = await getContentList({ limit: 8 })
+    items.value = res.items
   } catch (e) {
-    console.error('获取内容统计失败:', e)
+    console.error('获取内容失败:', e)
+  } finally {
+    loading.value = false
   }
+}
+
+function goToLibrary(type: string) {
+  router.push(`/library?type=${type}`)
+}
+
+function handlePlay(item: Content) {
+  const type = (item as any).content_type || 'video'
+  router.push(`/play/${type}/${item.id}`)
+}
+
+async function handleDelete(item: Content) {
+  if (!confirm(`确定删除「${item.title}」吗？`)) return
+  try {
+    await deleteContent(item.id)
+    items.value = items.value.filter(i => i.id !== item.id)
+  } catch (e) {
+    console.error('删除失败:', e)
+    alert('删除失败')
+  }
+}
+
+onMounted(() => {
+  fetchItems()
 })
 </script>
+
+<style scoped>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+</style>

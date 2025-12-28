@@ -23,17 +23,78 @@
 
       <!-- 步骤内容 -->
       <div class="bg-white/80 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-xl">
-        <!-- 步骤 1：选择主题 -->
+        <!-- 步骤 1：选择主题或输入描述 -->
         <div v-if="createStore.currentStep === 1">
-          <h2 class="text-xl font-bold text-gray-800 mb-6">选择故事主题</h2>
-          <ThemeSelector
-            :themes="createStore.themes"
-            :selected-category="createStore.pictureBookParams.themeCategory"
-            :selected-topic="createStore.pictureBookParams.themeTopic"
-            @update:selected-category="createStore.pictureBookParams.themeCategory = $event"
-            @update:selected-topic="createStore.pictureBookParams.themeTopic = $event"
-            @select="handleThemeSelect"
-          />
+          <!-- 模式切换 -->
+          <div class="flex gap-4 mb-6">
+            <button
+              class="flex-1 py-3 px-4 rounded-2xl border-2 transition-all text-center"
+              :class="createStore.pictureBookParams.creationMode === 'preset'
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-gray-200 text-gray-500 hover:border-purple-200'"
+              @click="createStore.pictureBookParams.creationMode = 'preset'"
+            >
+              <div class="text-lg mb-1">📚</div>
+              <div class="font-medium">预设主题</div>
+              <div class="text-xs opacity-70">从精选主题中选择</div>
+            </button>
+            <button
+              class="flex-1 py-3 px-4 rounded-2xl border-2 transition-all text-center"
+              :class="createStore.pictureBookParams.creationMode === 'smart'
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-gray-200 text-gray-500 hover:border-purple-200'"
+              @click="createStore.pictureBookParams.creationMode = 'smart'"
+            >
+              <div class="text-lg mb-1">✨</div>
+              <div class="font-medium">智能创作</div>
+              <div class="text-xs opacity-70">自由描述你的想法</div>
+            </button>
+          </div>
+
+          <!-- 预设模式：主题选择 -->
+          <div v-if="createStore.pictureBookParams.creationMode === 'preset'">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">选择故事主题</h2>
+            <ThemeSelector
+              :themes="createStore.themes"
+              :selected-category="createStore.pictureBookParams.themeCategory"
+              :selected-topic="createStore.pictureBookParams.themeTopic"
+              @update:selected-category="createStore.pictureBookParams.themeCategory = $event"
+              @update:selected-topic="createStore.pictureBookParams.themeTopic = $event"
+              @select="handleThemeSelect"
+            />
+          </div>
+
+          <!-- 智能模式：自由描述 -->
+          <div v-else>
+            <h2 class="text-xl font-bold text-gray-800 mb-6">描述你的创意</h2>
+            <textarea
+              v-model="createStore.pictureBookParams.customPrompt"
+              rows="4"
+              class="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-lg"
+              placeholder="例如：一个关于小熊学会分享的故事..."
+            />
+            <div class="text-right text-sm text-gray-400 mt-2">
+              {{ createStore.pictureBookParams.customPrompt?.length || 0 }}/200
+            </div>
+
+            <!-- 灵感标签 -->
+            <div class="mt-6">
+              <h3 class="text-sm font-medium text-gray-700 mb-3">快速灵感</h3>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="tag in inspirationTags"
+                  :key="tag.text"
+                  class="px-4 py-2 rounded-full text-sm border transition-all hover:shadow-md"
+                  :class="createStore.pictureBookParams.customPrompt === tag.prompt
+                    ? 'bg-purple-100 border-purple-300 text-purple-700'
+                    : 'bg-white border-gray-200 text-gray-600 hover:border-purple-200'"
+                  @click="createStore.pictureBookParams.customPrompt = tag.prompt"
+                >
+                  {{ tag.icon }} {{ tag.text }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 步骤 2：风格设置 -->
@@ -291,8 +352,18 @@
               <span class="font-medium text-gray-800">{{ childStore.currentChild?.name }}</span>
             </div>
             <div class="flex justify-between items-center py-2 border-b border-purple-100">
+              <span class="text-gray-600">创作模式</span>
+              <span class="font-medium text-gray-800">
+                {{ createStore.pictureBookParams.creationMode === 'preset' ? '📚 预设主题' : '✨ 智能创作' }}
+              </span>
+            </div>
+            <div v-if="createStore.pictureBookParams.creationMode === 'preset'" class="flex justify-between items-center py-2 border-b border-purple-100">
               <span class="text-gray-600">故事主题</span>
               <span class="font-medium text-gray-800">{{ selectedThemeName }}</span>
+            </div>
+            <div v-else class="py-2 border-b border-purple-100">
+              <span class="text-gray-600 block mb-2">创意描述</span>
+              <span class="font-medium text-gray-800 text-sm">{{ createStore.pictureBookParams.customPrompt }}</span>
             </div>
             <div class="flex justify-between items-center py-2 border-b border-purple-100">
               <span class="text-gray-600">艺术风格</span>
@@ -494,10 +565,24 @@ const lightingEffectOptions = [
   { value: 'cozy_lamp', label: '夜灯温馨', emoji: '🪔' }
 ]
 
+// 灵感标签（智能模式使用）
+const inspirationTags = [
+  { icon: '🦷', text: '刷牙', prompt: '小动物学习刷牙的有趣故事' },
+  { icon: '🥬', text: '吃蔬菜', prompt: '不爱吃蔬菜的小朋友学会爱上蔬菜' },
+  { icon: '😴', text: '睡觉', prompt: '帮助宝宝安心入睡的温馨故事' },
+  { icon: '🤝', text: '分享', prompt: '学会和朋友分享的快乐故事' },
+  { icon: '💪', text: '勇敢', prompt: '克服恐惧变得勇敢的冒险故事' },
+  { icon: '🎨', text: '创造', prompt: '发挥想象力创造美好事物的故事' }
+]
+
 // 计算属性
 const canNextStep = computed(() => {
   if (createStore.currentStep === 1) {
-    return !!createStore.pictureBookParams.themeCategory && !!createStore.pictureBookParams.themeTopic
+    if (createStore.pictureBookParams.creationMode === 'preset') {
+      return !!createStore.pictureBookParams.themeCategory && !!createStore.pictureBookParams.themeTopic
+    } else {
+      return !!createStore.pictureBookParams.customPrompt?.trim()
+    }
   }
   return true
 })
