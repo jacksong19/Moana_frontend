@@ -19,3 +19,7 @@ dist
 *.njsproj
 *.sln
 *.sw?
+
+# WeChat MiniProgram sensitive configs
+project.config.json
+project.private.config.json
